@@ -1,4 +1,4 @@
-package Model.User;
+package org.example.model.user;
 // Kế thừa phân cấp rõ ràng
 public class Bidder extends User {
 

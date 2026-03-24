@@ -1,6 +1,6 @@
-package Model.User;
+package org.example.model.user;
 
-import Model.Entity;
+import org.example.model.Entity;
 
 public abstract class User extends Entity {
     // Encapsulation: Thuộc tính phải là private/protected
