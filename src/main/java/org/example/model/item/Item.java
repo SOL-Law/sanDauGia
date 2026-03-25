@@ -28,12 +28,42 @@ public abstract class Item extends Entity {
         this.description = description;
     }
 
-    // --- (Đại ca bảo đệ tự Generate Get/Set cho 4 biến name, price, description nhé) ---
+
+    // get và set các hàm
+
+
+    public double getStartPrice() {
+        return startPrice;
+    }
+
+
+    public String getDescription() {
+        return description;
+    }
+
+    public void setDescription(String description) {
+        this.description = description;
+    }
+
+    public void setStartPrice(double startPrice) {
+        if (startPrice < 0) {
+            // TUNG LỖI: Cấm đặt giá khởi điểm âm
+            throw new IllegalArgumentException("❌ Bị điên à? Giá khởi điểm (" + startPrice + ") không được nhỏ hơn 0!");
+        }
+        this.startPrice = startPrice;
+    }
+
+    public void setCurrentPrice(double currentPrice) {
+        if (currentPrice < this.startPrice) {
+            // TUNG LỖI: Giá đấu hiện tại không được thấp hơn giá khởi điểm
+            throw new IllegalArgumentException("❌ Giá hiện tại không được thấp hơn giá khởi điểm!");
+        }
+        this.currentPrice = currentPrice;
+    }
 
     public String getName() { return name; }
     public void setName(String name) { this.name = name; }
     public double getCurrentPrice() { return currentPrice; }
-    public void setCurrentPrice(double currentPrice) { this.currentPrice = currentPrice; }
 
     // ĐA HÌNH: Ép tụi con phải tự định nghĩa cách in thông tin
     public abstract void displayItemDetails();

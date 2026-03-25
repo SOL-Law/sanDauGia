@@ -17,7 +17,25 @@ public class Art extends Item {
         this.artistName = artistName;
         this.material = material;
     }
-    // --- (Tự Generate Get/Set cho artistName và material) ---
+    // ---  Get và Set ----
+
+
+    public String getArtistName() {
+        return artistName;
+    }
+
+
+    public void setArtistName(String artistName) {
+        this.artistName = artistName;
+    }
+
+    public String getMaterial() {
+        return material;
+    }
+
+    public void setMaterial(String material) {
+        this.material = material;
+    }
 
     // THỰC THI ĐA HÌNH
     @Override
