@@ -2,13 +2,14 @@ package org.example.model.user;
 
 public class Admin extends User {
 
-    // Constructor mặc định
+    // Constructor mặc định (tạo object rỗng / phục vụ mapping dữ liệu)
     public Admin() {
         super();
     }
 
-    // Constructor khởi tạo người dùng với vai trò Quản trị viên (Admin)
+    // Constructor đầy đủ thông tin
     public Admin(int id, String username, String password, String email) {
+        // Gọi constructor lớp cha để khởi tạo thông tin chung
         super(id, username, password, email);
     }
 
@@ -17,8 +18,28 @@ public class Admin extends User {
     // ==========================================
     @Override
     public void displayRole() {
-        System.out.println("Vai trò hệ thống: Quản trị viên (Administrator).");
-        System.out.println("Tài khoản: " + this.getUsername() + " | Email bảo mật: " + this.getEmail());
-        System.out.println("Quyền hạn tối cao: Quản lý toàn bộ hệ thống, kiểm duyệt User, xóa Auction.");
+        System.out.println("--- THÔNG TIN QUẢN TRỊ VIÊN ---");
+
+        // Thông tin tài khoản
+        System.out.println("Username : " + getUsername());
+        System.out.println("Email    : " + getEmail());
+
+        // Vai trò + quyền hạn
+        System.out.println("Vai trò  : Admin (Quản trị viên)");
+        System.out.println("Quyền    : Quản lý toàn hệ thống, kiểm duyệt user, xóa auction");
+
+        System.out.println("--------------------------------");
+    }
+
+    // ==========================================
+    // GHI ĐÈ toString() (hỗ trợ debug/in nhanh)
+    // ==========================================
+    @Override
+    public String toString() {
+        return "Admin{" +
+                "id=" + getId() +
+                ", username='" + getUsername() + '\'' +
+                ", email='" + getEmail() + '\'' +
+                '}';
     }
 }

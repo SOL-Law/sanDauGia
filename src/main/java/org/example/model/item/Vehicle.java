@@ -1,41 +1,74 @@
 package org.example.model.item;
 
 public class Vehicle extends Item {
-    // ==========================================
-    // THUỘC TÍNH MỞ RỘNG (Đặc thù của Phương tiện)
-    // ==========================================
-    private String vehicleType;     // Phân loại phương tiện (VD: Ô tô, Xe máy)
-    private String engine;          // Thông số động cơ
 
-    // Constructor mặc định
+    // Thuộc tính riêng của phương tiện
+    private String vehicleType; // Loại xe (Ô tô, Xe máy...)
+    private String engine;      // Thông tin động cơ
+
+    // Constructor mặc định (tạo object rỗng)
     public Vehicle() {
         super();
     }
 
-    // Constructor khởi tạo đầy đủ thuộc tính
+    // Constructor đầy đủ thông tin
     public Vehicle(int id, String name, double startPrice, String description,
                    String vehicleType, String engine) {
         super(id, name, startPrice, description);
-        this.vehicleType = vehicleType;
-        this.engine = engine;
+
+        // Gọi setter để validate dữ liệu
+        this.setVehicleType(vehicleType);
+        this.setEngine(engine);
     }
 
-    // Getters & Setters
-    public String getVehicleType() { return vehicleType; }
-    public void setVehicleType(String vehicleType) { this.vehicleType = vehicleType; }
-    public String getEngine() { return engine; }
-    public void setEngine(String engine) { this.engine = engine; }
+    public String getVehicleType() {
+        return vehicleType;
+    }
 
-    // Ghi đè phương thức hiển thị chi tiết
+    // Validate: tránh null / rỗng
+    public void setVehicleType(String vehicleType) {
+        if (vehicleType == null || vehicleType.trim().isEmpty()) {
+            this.vehicleType = "Không rõ";
+        } else {
+            this.vehicleType = vehicleType.trim();
+        }
+    }
+
+    public String getEngine() {
+        return engine;
+    }
+
+    // Validate: tránh null / rỗng
+    public void setEngine(String engine) {
+        if (engine == null || engine.trim().isEmpty()) {
+            this.engine = "Không rõ";
+        } else {
+            this.engine = engine.trim();
+        }
+    }
+
+    // Hiển thị thông tin chi tiết (format đẹp để demo)
     @Override
     public void displayItemDetails() {
         System.out.println("--- CHI TIẾT PHƯƠNG TIỆN ---");
-        System.out.println("Mã phương tiện: " + this.getId());
-        System.out.println("Tên phương tiện: " + this.getName());
-        System.out.println("Mô tả          : " + this.getDescription());
-        System.out.println("Loại xe        : " + this.vehicleType);
-        System.out.println("Động cơ        : " + this.engine);
-        System.out.println("Giá hiện tại   : " + this.getCurrentPrice() + " VNĐ");
+        System.out.println("Mã phương tiện : " + getId());
+        System.out.println("Tên phương tiện: " + getName());
+        System.out.println("Mô tả          : " + getDescription());
+        System.out.println("Loại xe        : " + vehicleType);
+        System.out.println("Động cơ        : " + engine);
+        System.out.printf("Giá hiện tại   : %,.0f VNĐ\n", getCurrentPrice());
         System.out.println("----------------------------");
+    }
+
+    // toString phục vụ debug/in nhanh
+    @Override
+    public String toString() {
+        return "Vehicle{" +
+                "id=" + getId() +
+                ", name='" + getName() + '\'' +
+                ", vehicleType='" + vehicleType + '\'' +
+                ", engine='" + engine + '\'' +
+                ", price=" + String.format("%,.0f VNĐ", getCurrentPrice()) +
+                '}';
     }
 }

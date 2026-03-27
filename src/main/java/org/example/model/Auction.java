@@ -4,88 +4,118 @@ import org.example.model.item.Item;
 import org.example.model.user.User;
 
 public class Auction extends Entity {
-    // ==========================================
-    // THUỘC TÍNH QUẢN LÝ PHIÊN ĐẤU GIÁ
-    // ==========================================
-    private Item item;                // Đối tượng hàng hóa được mang ra đấu giá
-    private User highestBidder;       // Tham chiếu đến người dùng đang trả giá cao nhất
 
-    private double currentHighestBid; // Mức giá cao nhất được ghi nhận ở thời điểm hiện tại
-    private boolean isActive;         // Trạng thái phiên đấu giá (true: đang diễn ra, false: đã kết thúc)
+    private Item item;
+    private User highestBidder;
+    private double currentHighestBid;
+    private boolean isActive;
 
-    // ==========================================
-    // CONSTRUCTOR
-    // ==========================================
-
-    // Constructor mặc định (cần thiết cho việc map dữ liệu từ Database)
     public Auction() {
         super();
     }
 
-    // Constructor khởi tạo phiên đấu giá mới dựa trên một vật phẩm
     public Auction(int id, Item item) {
         super(id);
+
+        // Validate
+        if (item == null) {
+            throw new IllegalArgumentException("Item không được null.");
+        }
+
         this.item = item;
-        this.currentHighestBid = item.getStartPrice(); // Giá khởi điểm của phiên bằng giá gốc của vật phẩm
-        this.highestBidder = null; // Chưa có giao dịch đặt giá nào khi mới mở phiên
-        this.isActive = true;      // Thiết lập trạng thái hoạt động cho phiên đấu giá
+        this.currentHighestBid = item.getStartPrice();
+        this.highestBidder = null;
+        this.isActive = true;
     }
 
-    // ==========================================
-    // NGHIỆP VỤ LÕI 1: XỬ LÝ ĐẶT GIÁ (PLACE BID)
-    // ==========================================
+    // =========================
+    // ĐẶT GIÁ
+    // =========================
     public boolean placeBid(User bidder, double bidAmount) {
-        // Kiểm tra ràng buộc 1: Phiên đấu giá phải đang trong trạng thái hoạt động
+
+        // Check null
+        if (bidder == null) {
+            System.out.println("Lỗi: Người dùng không hợp lệ.");
+            return false;
+        }
+
         if (!isActive) {
-            System.out.println("Giao dịch thất bại: Phiên đấu giá này đã kết thúc.");
+            System.out.println("Phiên đã kết thúc.");
             return false;
         }
 
-        // Kiểm tra ràng buộc 2: Mức giá đề xuất phải lớn hơn mức giá cao nhất hiện tại
+        // Không cho người đang top tự bid
+        if (bidder.equals(highestBidder)) {
+            System.out.println("Bạn đang là người trả giá cao nhất rồi.");
+            return false;
+        }
+
         if (bidAmount <= currentHighestBid) {
-            System.out.println("Giao dịch thất bại: Mức giá đề xuất phải cao hơn " + currentHighestBid + " VNĐ.");
+            System.out.printf("Giá phải > %,.0f VNĐ\n", currentHighestBid);
             return false;
         }
 
-        // Kiểm tra ràng buộc 3: Xác thực số dư khả dụng trong tài khoản của người dùng
         if (bidder.getBalance() < bidAmount) {
-            System.out.println("Giao dịch thất bại: Tài khoản của người dùng [" + bidder.getUsername() + "] không đủ số dư.");
+            System.out.println("Không đủ tiền.");
             return false;
         }
 
-        // Nếu thỏa mãn tất cả điều kiện, tiến hành ghi nhận mức giá mới
-        this.currentHighestBid = bidAmount;
-        this.highestBidder = bidder;
+        // Cập nhật
+        currentHighestBid = bidAmount;
+        highestBidder = bidder;
+        item.setCurrentPrice(bidAmount);
 
-        // Đồng bộ hóa mức giá hiện tại cho đối tượng Item
-        this.item.setCurrentPrice(bidAmount);
+        System.out.printf("Thành công: [%s] bid %,.0f VNĐ\n",
+                bidder.getUsername(), bidAmount);
 
-        System.out.println("Giao dịch thành công: Người dùng [" + bidder.getUsername() + "] đã đặt giá " + bidAmount + " VNĐ.");
         return true;
     }
 
-    // ==========================================
-    // NGHIỆP VỤ LÕI 2: KẾT THÚC PHIÊN ĐẤU GIÁ
-    // ==========================================
+    // =========================
+    // KẾT THÚC
+    // =========================
     public void closeAuction() {
-        this.isActive = false; // Cập nhật trạng thái đóng phiên
-        System.out.println("\n--- KẾT THÚC PHIÊN ĐẤU GIÁ SỐ " + this.getId() + " ---");
 
-        // Kiểm tra xem có người dùng nào thắng cuộc không
+        // Chặn gọi nhiều lần
+        if (!isActive) {
+            System.out.println("Phiên đã đóng rồi.");
+            return;
+        }
+
+        isActive = false;
+
+        System.out.println("\n--- KẾT THÚC PHIÊN " + getId() + " ---");
+
         if (highestBidder != null) {
-            // Thực hiện nghiệp vụ trừ tiền từ tài khoản người thắng cuộc
             highestBidder.deductBalance(currentHighestBid);
-            System.out.println("Thông báo: Người dùng [" + highestBidder.getUsername() + "] đã thắng đấu giá với mức tiền: " + currentHighestBid + " VNĐ.");
+
+            System.out.printf("Người thắng: [%s] với %,.0f VNĐ\n",
+                    highestBidder.getUsername(),
+                    currentHighestBid);
         } else {
-            System.out.println("Thông báo: Phiên đấu giá kết thúc mà không có giao dịch nào được thực hiện.");
+            System.out.println("Không có ai tham gia.");
         }
     }
 
-    // ==========================================
-    // GETTERS & SETTERS
-    // ==========================================
+    // =========================
+    // GETTER
+    // =========================
     public Item getItem() { return item; }
     public User getHighestBidder() { return highestBidder; }
     public double getCurrentHighestBid() { return currentHighestBid; }
     public boolean isActive() { return isActive; }
+
+    // =========================
+    // DEBUG
+    // =========================
+    @Override
+    public String toString() {
+        return "Auction{" +
+                "id=" + getId() +
+                ", item=" + (item != null ? item.getName() : "null") +
+                ", highestBid=" + String.format("%,.0f VNĐ", currentHighestBid) +
+                ", bidder=" + (highestBidder != null ? highestBidder.getUsername() : "null") +
+                ", active=" + isActive +
+                '}';
+    }
 }

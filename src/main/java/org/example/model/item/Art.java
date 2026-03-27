@@ -1,49 +1,65 @@
 package org.example.model.item;
 
 public class Art extends Item {
-    // ==========================================
-    // THUỘC TÍNH MỞ RỘNG (Đặc thù của Tác phẩm nghệ thuật)
-    // ==========================================
-    private String author;      // Tác giả/Nghệ nhân sáng tác
-    private String material;    // Chất liệu (VD: Sơn dầu, Gỗ, Gốm sứ)
 
-    // ==========================================
-    // CONSTRUCTORS
-    // ==========================================
-    // Constructor mặc định (Hỗ trợ Data Mapping)
+    // Thuộc tính riêng của tác phẩm nghệ thuật
+    private String author;      // Tác giả
+    private String material;    // Chất liệu
+
+    // Constructor mặc định (dùng khi tạo object rỗng hoặc đọc dữ liệu từ file/db)
     public Art() {
         super();
     }
 
-    // Constructor khởi tạo đầy đủ thuộc tính
-    public Art(int id, String name, double startPrice, String description,
-               String author, String material) {
-        // Kế thừa và khởi tạo thuộc tính từ lớp cha (Item)
+    // Constructor đầy đủ thông tin
+    public Art(int id, String name, double startPrice, String description, String author, String material) {
+        // Gọi constructor lớp cha để khởi tạo phần chung
         super(id, name, startPrice, description);
-        this.author = author;
+
+        // Gọi setter để kiểm tra dữ liệu đầu vào
+        this.setAuthor(author);
+        this.material = material; // (chưa validate ở đây)
+    }
+
+    public String getAuthor() {
+        return author;
+    }
+
+    // Setter có xử lý dữ liệu đầu vào
+    public void setAuthor(String author) {
+        // Nếu null hoặc rỗng → gán mặc định
+        if (author == null || author.trim().isEmpty()) {
+            this.author = "Không rõ";
+        } else {
+            this.author = author; // (có thể trim thêm cho đẹp)
+        }
+    }
+
+    public String getMaterial() {
+        return material;
+    }
+
+    // Setter đơn giản (chưa có validate)
+    public void setMaterial(String material) {
         this.material = material;
     }
 
-    // ==========================================
-    // GETTERS & SETTERS
-    // ==========================================
-    public String getAuthor() { return author; }
-    public void setAuthor(String author) { this.author = author; }
-    public String getMaterial() { return material; }
-    public void setMaterial(String material) { this.material = material; }
-
-    // ==========================================
-    // GHI ĐÈ PHƯƠNG THỨC (Đa hình - Polymorphism)
-    // ==========================================
+    // Ghi đè phương thức hiển thị từ lớp cha
     @Override
     public void displayItemDetails() {
-        System.out.println("--- CHI TIẾT TÁC PHẨM NGHỆ THUẬT ---");
-        System.out.println("Mã tác phẩm  : " + this.getId());
-        System.out.println("Tên tác phẩm : " + this.getName());
-        System.out.println("Mô tả        : " + this.getDescription());
-        System.out.println("Tác giả      : " + this.author);
-        System.out.println("Chất liệu    : " + this.material);
-        System.out.println("Giá hiện tại : " + this.getCurrentPrice() + " VNĐ");
-        System.out.println("------------------------------------");
+        // In ra thông tin object thông qua toString()
+        System.out.println(this.toString());
+    }
+
+    // toString dùng để in nhanh thông tin object (debug/log)
+    @Override
+    public String toString() {
+        return "Art{" +
+                "id=" + getId() +                 // ID từ lớp cha
+                ", name='" + getName() + '\'' +   // Tên tác phẩm
+                ", author='" + author + '\'' +   // Tác giả
+                ", material='" + material + '\'' + // Chất liệu
+                ", price=" + getCurrentPrice() + // Giá hiện tại
+                '}';
     }
 }

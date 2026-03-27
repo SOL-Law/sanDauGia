@@ -7,7 +7,7 @@ public class DBConnection {
     public static Connection getConnection() {
         try {
             // Nhớ sửa 'root' cuối cùng thành mật khẩu MySQL của đại ca
-            // 'sanDauGia' là tên Database đại ca tạo trong MySQL Workbench
+            // 'sanDauGia' là tên Database  tạo trong MySQL Workbench
             String url = "jdbc:mysql://localhost:3306/sanDauGia";
             String user = "root";
             String pass = "123456";
