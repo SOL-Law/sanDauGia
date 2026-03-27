@@ -3,68 +3,62 @@ package org.example.model.item;
 import org.example.model.Entity;
 
 public abstract class Item extends Entity {
-    // Thuộc tính riêng của Item để private bảo mật
-    private String name;
-    private double startPrice;
-    private double currentPrice;
-    private String description;
+    // ==========================================
+    // THUỘC TÍNH HÀNG HÓA (Đóng gói dữ liệu)
+    // ==========================================
+    private String name;            // Tên vật phẩm
+    private double startPrice;      // Mức giá khởi điểm khi đưa lên sàn
+    private double currentPrice;    // Mức giá cao nhất hiện tại đang được đấu
+    private String description;     // Thông tin mô tả chi tiết
 
     // ==========================================
-    // 1. Constructor RỖNG (Bắt cặp với Entity rỗng)
-    // Cực kỳ quan trọng để sau này lôi dữ liệu từ MySQL lên!
+    // CONSTRUCTORS
     // ==========================================
+    // Constructor mặc định
     public Item() {
-        super(); // Gọi lên cụ Entity rỗng
+        super();
     }
 
-    // ==========================================
-    // 2. Constructor ĐẦY ĐỦ (Dùng khi tạo mới món hàng bằng tay)
-    // ==========================================
+    // Constructor khởi tạo vật phẩm mới
     public Item(int id, String name, double startPrice, String description) {
-        super(id); // Ném ID lên cho cụ Entity
+        super(id); // Gọi constructor lớp cha Entity để thiết lập ID
         this.name = name;
-        this.startPrice = startPrice;
-        this.currentPrice = startPrice; // Lúc mới đăng, giá hiện tại = giá khởi điểm
+        this.setStartPrice(startPrice); // Gọi setter để áp dụng logic kiểm tra dữ liệu
+        this.currentPrice = startPrice; // Khi mới lên sàn, giá hiện tại bằng giá khởi điểm
         this.description = description;
     }
 
+    // ==========================================
+    // GETTERS & SETTERS (Kèm xử lý ngoại lệ - Exception)
+    // ==========================================
+    public String getName() { return name; }
+    public void setName(String name) { this.name = name; }
 
-    // get và set các hàm
+    public String getDescription() { return description; }
+    public void setDescription(String description) { this.description = description; }
 
-
-    public double getStartPrice() {
-        return startPrice;
-    }
-
-
-    public String getDescription() {
-        return description;
-    }
-
-    public void setDescription(String description) {
-        this.description = description;
-    }
+    public double getStartPrice() { return startPrice; }
+    public double getCurrentPrice() { return currentPrice; }
 
     public void setStartPrice(double startPrice) {
+        // Kiểm tra tính hợp lệ: Giá khởi điểm không được phép âm
         if (startPrice < 0) {
-            // TUNG LỖI: Cấm đặt giá khởi điểm âm
-            throw new IllegalArgumentException("❌ Bị điên à? Giá khởi điểm (" + startPrice + ") không được nhỏ hơn 0!");
+            throw new IllegalArgumentException("Lỗi dữ liệu: Giá khởi điểm không được mang giá trị âm.");
         }
         this.startPrice = startPrice;
     }
 
     public void setCurrentPrice(double currentPrice) {
+        // Kiểm tra nghiệp vụ: Giá đấu mới không được thấp hơn giá khởi điểm
         if (currentPrice < this.startPrice) {
-            // TUNG LỖI: Giá đấu hiện tại không được thấp hơn giá khởi điểm
-            throw new IllegalArgumentException("❌ Giá hiện tại không được thấp hơn giá khởi điểm!");
+            throw new IllegalArgumentException("Lỗi nghiệp vụ: Giá hiện tại không được thấp hơn mức giá khởi điểm.");
         }
         this.currentPrice = currentPrice;
     }
 
-    public String getName() { return name; }
-    public void setName(String name) { this.name = name; }
-    public double getCurrentPrice() { return currentPrice; }
-
-    // ĐA HÌNH: Ép tụi con phải tự định nghĩa cách in thông tin
+    // ==========================================
+    // PHƯƠNG THỨC TRỪU TƯỢNG (Đa hình - Polymorphism)
+    // ==========================================
+    // Yêu cầu các lớp con (Art, Electronics, Vehicle) tự định nghĩa cách hiển thị
     public abstract void displayItemDetails();
 }
