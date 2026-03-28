@@ -13,25 +13,34 @@ public class MainUI {
 
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        frame.setLayout(new FlowLayout());
+        // Load ảnh nền
+        ImageIcon backgroundImage = new ImageIcon("src/main/java/frontend/background.jpg");
+
+        JLabel background = new JLabel(backgroundImage);
+
+        background.setLayout(new FlowLayout());
 
         JLabel userLabel = new JLabel("Username:");
+        userLabel.setForeground(Color.WHITE);
 
         JTextField usernameField = new JTextField(20);
 
         JLabel passLabel = new JLabel("Password:");
+        passLabel.setForeground(Color.WHITE);
 
         JPasswordField passwordField = new JPasswordField(20);
 
         JButton loginButton = new JButton("Login");
 
-        frame.add(userLabel);
-        frame.add(usernameField);
+        background.add(userLabel);
+        background.add(usernameField);
 
-        frame.add(passLabel);
-        frame.add(passwordField);
+        background.add(passLabel);
+        background.add(passwordField);
 
-        frame.add(loginButton);
+        background.add(loginButton);
+
+        frame.setContentPane(background);
 
         frame.setVisible(true);
     }
