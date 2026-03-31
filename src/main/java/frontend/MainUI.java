@@ -33,7 +33,13 @@ public class MainUI {
         JButton loginButton = new JButton("Login");
         loginButton.addActionListener(e -> {
 
-            System.out.println("Login clicked!");
+            String username = usernameField.getText();
+
+            String password = new String(passwordField.getPassword());
+
+            System.out.println("Username: " + username);
+
+            System.out.println("Password: " + password);
 
         });
 
