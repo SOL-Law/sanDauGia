@@ -37,9 +37,9 @@ public class MainUI {
 
             String password = new String(passwordField.getPassword());
 
-            System.out.println("Username: " + username);
-
-            System.out.println("Password: " + password);
+            JOptionPane.showMessageDialog(frame,
+                    "Username: " + username +
+                            "\nPassword: " + password);
 
         });
 
