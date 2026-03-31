@@ -2,7 +2,7 @@ package model.user;
 
 import model.Entity;
 
-public abstract class User extends Entity {
+public class User extends Entity {
 
     private String username;
     private String password;
@@ -92,11 +92,6 @@ public abstract class User extends Entity {
         System.out.printf("Trừ tiền thành công [%s]: -%,.0f VNĐ\n",
                 username, amount);
     }
-
-    // =========================
-    // ABSTRACT
-    // =========================
-    public abstract void displayRole();
 
     // =========================
     // DEBUG (KHÔNG in password)
