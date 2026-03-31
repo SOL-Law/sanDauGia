@@ -16,7 +16,6 @@ public class Bidder extends User {
     // ==========================================
     // GHI ĐÈ PHƯƠNG THỨC (Đa hình - Polymorphism)
     // ==========================================
-    @Override
     public void displayRole() {
         System.out.println("Vai trò hệ thống: Người tham gia đấu giá (Bidder).");
         System.out.println("Tài khoản: " + this.getUsername() + " | Email: " + this.getEmail());

@@ -16,7 +16,6 @@ public class Seller extends User {
     // ==========================================
     // GHI ĐÈ PHƯƠNG THỨC (Đa hình - Polymorphism)
     // ==========================================
-    @Override
     public void displayRole() {
         System.out.println("--- THÔNG TIN NGƯỜI BÁN ---");
 
