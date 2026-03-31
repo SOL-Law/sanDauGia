@@ -31,6 +31,11 @@ public class MainUI {
         JPasswordField passwordField = new JPasswordField(20);
 
         JButton loginButton = new JButton("Login");
+        loginButton.addActionListener(e -> {
+
+            System.out.println("Login clicked!");
+
+        });
 
         background.add(userLabel);
         background.add(usernameField);
