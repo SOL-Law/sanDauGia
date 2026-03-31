@@ -27,6 +27,7 @@ public class ClientHandler implements Runnable {
             this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.out = new PrintWriter(socket.getOutputStream(), true);
         } catch (Exception e) {
+            System.out.println("Lỗi khởi tạo luồng cho Client: " + e.getMessage());
             e.printStackTrace();
         }
     }
@@ -42,8 +43,6 @@ public class ClientHandler implements Runnable {
                 switch (req.getAction()) {
                     case "LOGIN":
                         User userLogin = gson.fromJson(req.getPayload(), User.class);
-
-                        // SỬA LỖI Ở ĐÂY: Bóc tách ra 2 tham số truyền vào để khớp 100% với hàm của bạn bác
                         if (UserDao.login(userLogin.getUsername(), userLogin.getPassword())) {
                             System.out.println("Client " + socket.getPort() + " đăng nhập THÀNH CÔNG!");
                             sendMessage(gson.toJson(new Request("LOGIN_SUCCESS", "Đăng nhập thành công!")));
@@ -54,8 +53,6 @@ public class ClientHandler implements Runnable {
 
                     case "REGISTER":
                         User userReg = gson.fromJson(req.getPayload(), User.class);
-
-                        // SỬA LỖI Ở ĐÂY: Truyền đúng 2 tham số String
                         if (UserDao.register(userReg.getUsername(), userReg.getPassword())) {
                             sendMessage(gson.toJson(new Request("REGISTER_SUCCESS", "Tạo tài khoản thành công!")));
                         } else {
@@ -69,7 +66,11 @@ public class ClientHandler implements Runnable {
                 }
             }
         } catch (Exception e) {
-            System.out.println("Client " + socket.getPort() + " đã ngắt kết nối.");
+            // 🚨 ĐÂY LÀ CHỖ QUAN TRỌNG NHẤT VỪA SỬA: In ra lỗi màu đỏ để biết code sai ở đâu!
+            System.out.println("❌ Client " + socket.getPort() + " đã ngắt kết nối do văng lỗi (Crash)!");
+            System.out.println("==== CHI TIẾT LỖI BÊN DƯỚI ====");
+            e.printStackTrace();
+            System.out.println("===============================");
         } finally {
             try {
                 AuctionServer.activeClients.remove(this);
