@@ -38,7 +38,7 @@ public class AuctionServer {
     }
     // Hàm này duyệt qua danh sách tất cả client đang kết nối và gửi tin nhắn cho họ
     public static void broadcast(String jsonMessage) {
-        System.out.println("📢 [SERVER PHÁT SÓNG]: " + jsonMessage);
+        System.out.println(" [SERVER PHÁT SÓNG]: " + jsonMessage);
         for (ClientHandler client : activeClients) {
             client.sendMessage(jsonMessage);
         }

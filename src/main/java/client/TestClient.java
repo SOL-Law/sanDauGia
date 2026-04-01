@@ -12,18 +12,26 @@ import java.util.Scanner;
 public class TestClient {
     public static void main(String[] args) {
         try (Socket socket = new Socket("localhost", 8888)) {
-            System.out.println("Đã vào phòng đấu giá!");
+            System.out.println("Đã kết nối tới Tổng đài!");
             Gson gson = new Gson();
             PrintWriter out = new PrintWriter(socket.getOutputStream(), true);
 
-            // 1. TẠO LUỒNG CHẠY NGẦM ĐỂ LẮNG NGHE SERVER (Observer)
+            // ==========================================
+            // 1. GỬI LỆNH ĐĂNG NHẬP NGAY LÚC MỚI VÀO (Nằm ngoài vòng lặp)
+            // ==========================================
+            Request loginReq = new Request("LOGIN", "{\"username\":\"trong_le\", \"password\":\"123456\"}");
+            out.println(gson.toJson(loginReq));
+
+            // ==========================================
+            // 2. TẠO LUỒNG CHẠY NGẦM ĐỂ LẮNG NGHE SERVER (Observer)
+            // ==========================================
             new Thread(() -> {
                 try {
                     BufferedReader in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
                     String fromServer;
                     while ((fromServer = in.readLine()) != null) {
                         // Khi Server phát sóng, dòng này sẽ được in ra
-                        System.out.println("\n🔔 [TIN NHẮN REALTIME]: " + fromServer);
+                        System.out.println("\n🔔 [TIN NHẮN TỪ SERVER]: " + fromServer);
                         System.out.print("Nhập số tiền bạn muốn đấu giá: "); // In lại dấu nhắc
                     }
                 } catch (Exception e) {
@@ -31,7 +39,9 @@ public class TestClient {
                 }
             }).start();
 
-            // 2. LUỒNG CHÍNH ĐỂ NGƯỜI DÙNG NHẬP GIÁ TỪ BÀN PHÍM
+            // ==========================================
+            // 3. VÒNG LẶP CHÍNH CHỈ DÙNG ĐỂ GÕ GIÁ TIỀN
+            // ==========================================
             Scanner scanner = new Scanner(System.in);
             while (true) {
                 System.out.print("Nhập số tiền bạn muốn đấu giá: ");

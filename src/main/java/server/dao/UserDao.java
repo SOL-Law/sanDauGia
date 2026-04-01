@@ -1,37 +1,64 @@
 package server.dao;
 
-import model.user.Bidder;
-import model.user.User;
+import server.util.DBConnection;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
 
 public class UserDao {
-    // Tạm thời dùng List lưu trên RAM. Sau này nhóm bạn thay ruột các hàm này bằng lệnh SQL nhé!
-    private static List<User> database = new ArrayList<>();
 
-    // Hàm đăng ký
-    public static boolean register(String username, String password) {
-        // 1. Kiểm tra xem username đã có ai dùng chưa
-        for (User u : database) {
-            if (u.getUsername().equals(username)) {
-                return false; // Trùng tên, từ chối!
+    // ==========================================
+    // 1. HÀM ĐĂNG NHẬP (Kết nối MySQL)
+    // ==========================================
+    public static boolean login(String username, String password) {
+        try (Connection conn = DBConnection.getConnection()) {
+            String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+            PreparedStatement pst = conn.prepareStatement(sql);
+            pst.setString(1, username);
+            pst.setString(2, password);
+
+            ResultSet rs = pst.executeQuery();
+            if (rs.next()) {
+                System.out.println("🗄️ [DATABASE]: Đã xác minh tài khoản: " + username);
+                return true;
             }
+        } catch (Exception e) {
+            System.out.println("Lỗi Database: " + e.getMessage());
         }
-        // 2. Tạo ID tự tăng và lưu vào danh sách
-        int newId = database.size() + 1;
-        database.add(new Bidder(newId, username, password, "default@email.com"));
-        System.out.println("🗄️ [DATABASE]: Đã lưu tài khoản mới: " + username);
-        return true;
+        return false;
     }
 
-    // Hàm đăng nhập
-    public static boolean login(String username, String password) {
-        for (User u : database) {
-            if (u.getUsername().equals(username) && u.getPassword().equals(password)) {
-                return true; // Đúng thông tin
+    // ==========================================
+    // 2. HÀM ĐĂNG KÝ (Kết nối MySQL)
+    // ==========================================
+    public static boolean register(String username, String password) {
+        try (Connection conn = DBConnection.getConnection()) {
+            // Bước 1: Kiểm tra xem tên đăng nhập đã ai dùng chưa
+            String checkSql = "SELECT * FROM users WHERE username = ?";
+            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+            checkStmt.setString(1, username);
+            ResultSet rs = checkStmt.executeQuery();
+
+            if (rs.next()) {
+                return false; // Tên đã tồn tại trong MySQL -> Từ chối!
             }
+
+            // Bước 2: Nếu chưa ai dùng, lưu tài khoản mới vào MySQL
+            String insertSql = "INSERT INTO users (username, password, email) VALUES (?, ?, ?)";
+            PreparedStatement insertStmt = conn.prepareStatement(insertSql);
+            insertStmt.setString(1, username);
+            insertStmt.setString(2, password);
+            insertStmt.setString(3, "newuser@email.com"); // Email mặc định
+
+            int rows = insertStmt.executeUpdate();
+            if (rows > 0) {
+                System.out.println("🗄️ [DATABASE]: Đã tạo tài khoản mới: " + username);
+                return true;
+            }
+        } catch (Exception e) {
+            System.out.println("Lỗi Database khi đăng ký: " + e.getMessage());
         }
-        return false; // Sai tên hoặc mật khẩu
+        return false;
     }
 }
