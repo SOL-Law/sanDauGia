@@ -61,12 +61,13 @@ public class ClientHandler implements Runnable {
                         break;
 
                     case "PLACE_BID":
+                        // Gọi hàm xử lý đặt giá
                         processBid(req.getPayload());
                         break;
                 }
             }
         } catch (Exception e) {
-            // 🚨 ĐÂY LÀ CHỖ QUAN TRỌNG NHẤT VỪA SỬA: In ra lỗi màu đỏ để biết code sai ở đâu!
+            // 🚨 In ra lỗi màu đỏ để biết code sai ở đâu!
             System.out.println("❌ Client " + socket.getPort() + " đã ngắt kết nối do văng lỗi (Crash)!");
             System.out.println("==== CHI TIẾT LỖI BÊN DƯỚI ====");
             e.printStackTrace();
@@ -87,15 +88,26 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    // ==========================================
+    // KHÚC NÀY LÀ KHÚC VỪA ĐƯỢC NÂNG CẤP ĐÂY!
+    // ==========================================
     private void processBid(String payloadJson) {
         synchronized (BID_LOCK) {
             try {
-                System.out.println("Đang xử lý đặt giá an toàn...");
+                // 1. Dùng Gson dịch cục JSON (ví dụ: {"price": 98}) thành object BidInfo
+                model.BidInfo bid = gson.fromJson(payloadJson, model.BidInfo.class);
 
-                String alertJson = gson.toJson(new Request("UPDATE_PRICE", "Có người vừa đặt giá mới!"));
+                System.out.println("Nhận được mức giá mới từ Client: " + bid.getPrice());
+
+                // 2. Gom thông báo chứa mức giá thật sự để chuẩn bị phát loa
+                String message = "Cập nhật! Giá mới nhất là: " + bid.getPrice() + " VNĐ";
+                String alertJson = gson.toJson(new Request("UPDATE_PRICE", message));
+
+                // 3. Phát loa cho tất cả mọi người trong phòng biết
                 AuctionServer.broadcast(alertJson);
 
             } catch (Exception e) {
+                System.out.println("Lỗi lúc đọc giá: " + e.getMessage());
                 e.printStackTrace();
             }
         }
