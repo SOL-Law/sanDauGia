@@ -2,6 +2,7 @@ package server;
 
 import com.google.gson.Gson;
 import network.Request;
+import server.dao.AuctionDao; // <-- Thêm dòng import này
 import server.dao.UserDao;
 import model.user.User;
 
@@ -11,16 +12,12 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 public class ClientHandler implements Runnable {
-    // Đã thêm chữ 'final' để triệt tiêu warning màu vàng của IntelliJ
     private final Socket socket;
     private BufferedReader in;
     private PrintWriter out;
     private Gson gson;
 
-    // Ổ khóa bảo vệ luồng đấu giá đồng thời (Concurrency)
-    private static final Object BID_LOCK = new Object();
-    // THÊM DÒNG NÀY: Biến lưu giá cao nhất hiện tại (dùng chung cho cả phòng)
-    private static double currentHighestBid = 0;
+    // Đã XÓA biến currentHighestBid và BID_LOCK đi vì mình sẽ lấy dữ liệu chuẩn từ DAO và Lock thẳng vào class DAO
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
@@ -63,13 +60,11 @@ public class ClientHandler implements Runnable {
                         break;
 
                     case "PLACE_BID":
-                        // Gọi hàm xử lý đặt giá
                         processBid(req.getPayload());
                         break;
                 }
             }
         } catch (Exception e) {
-            //  In ra lỗi màu đỏ để biết code sai ở đâu!
             System.out.println(" Client " + socket.getPort() + " đã ngắt kết nối do văng lỗi (Crash)!");
             System.out.println("==== CHI TIẾT LỖI BÊN DƯỚI ====");
             e.printStackTrace();
@@ -91,32 +86,41 @@ public class ClientHandler implements Runnable {
     }
 
     // ==========================================
-    // KHÚC NÀY LÀ KHÚC VỪA ĐƯỢC NÂNG CẤP ĐÂY!
+    // LOGIC ĐẤU GIÁ (ĐÃ ĐỒNG BỘ CONCURRENCY & DAO)
     // ==========================================
     private void processBid(String payloadJson) {
-        synchronized (BID_LOCK) { // Nhờ có cái khóa này mà 2 người đặt giá cùng lúc cũng không bị lỗi
-            try {
-                // 1. Dùng Gson dịch cục JSON thành object BidInfo
-                model.BidInfo bid = gson.fromJson(payloadJson, model.BidInfo.class);
 
+        // Dùng AuctionDao.class làm ổ khóa. Đảm bảo 2 người gọi DB cùng lúc sẽ phải xếp hàng
+        synchronized (AuctionDao.class) {
+            try {
+                model.BidInfo bid = gson.fromJson(payloadJson, model.BidInfo.class);
                 System.out.println("Client gửi lên mức giá: " + bid.getPrice());
 
-                // ==========================================
-                // 2. LOGIC KIỂM TRA GIÁ NẰM Ở ĐÂY NÀY!
-                // ==========================================
-                if (bid.getPrice() <= currentHighestBid) {
-                    // Trả về lỗi cho riêng cái người vừa nhập sai (không phát loa)
-                    sendMessage(gson.toJson(new Request("ERROR", "Giá không hợp lệ! Phải cao hơn " + currentHighestBid + " VNĐ")));
+                // Mặc định món hàng số 1 và user số 1 (Hoặc ông có thể lấy từ bid.getAuctionId() nếu class BidInfo của ông có)
+                int auctionId = 1;
+                int userId = 1;
+
+                // 1. Kiểm tra trạng thái: Phiên đấu giá còn mở không?
+                if (AuctionDao.isAuctionRunning(auctionId)) {
+
+                    // 2. Lấy giá hiện tại từ DB (Hoặc từ hàm Mock)
+                    double currentPrice = AuctionDao.getCurrentPrice(auctionId);
+
+                    // 3. Kiểm tra giá: Mức giá đưa ra phải lớn hơn giá hiện tại
+                    if (bid.getPrice() <= currentPrice) {
+                        sendMessage(gson.toJson(new Request("ERROR", "Giá không hợp lệ! Phải cao hơn " + currentPrice + " VNĐ")));
+                    } else {
+                        // 4. Lưu lịch sử: Cập nhật giá mới xuống DB
+                        AuctionDao.placeBid(auctionId, userId, bid.getPrice());
+
+                        // 5. Cập nhật theo thời gian thực (Observer Pattern)
+                        String message = "Cập nhật! Giá mới nhất là: " + bid.getPrice() + " VNĐ";
+                        String alertJson = gson.toJson(new Request("UPDATE_PRICE", message));
+                        AuctionServer.broadcast(alertJson);
+                    }
                 } else {
-                    // Giá hợp lệ -> Cập nhật kỷ lục mới trên Server
-                    currentHighestBid = bid.getPrice();
-
-                    // Gom thông báo để chuẩn bị phát loa
-                    String message = "Cập nhật! Giá mới nhất là: " + currentHighestBid + " VNĐ";
-                    String alertJson = gson.toJson(new Request("UPDATE_PRICE", message));
-
-                    // Phát loa cho TẤT CẢ mọi người trong phòng biết kỷ lục mới
-                    AuctionServer.broadcast(alertJson);
+                    // Báo lỗi nếu phiên đã đóng
+                    sendMessage(gson.toJson(new Request("ERROR", "Phiên đấu giá này đã kết thúc!")));
                 }
 
             } catch (Exception e) {
