@@ -4,6 +4,7 @@ import model.item.Item;
 import model.user.User;
 
 public class Auction extends Entity {
+    private static final double MIN_BID_INCREMENT = 10_000;
 
     private Item item;
     private User highestBidder;
@@ -18,8 +19,8 @@ public class Auction extends Entity {
         if (!isActive) return "Phiên đã kết thúc";
         if (highestBidder != null && bidder.equals(highestBidder))
             return "Bạn đang là người trả giá cao nhất";
-        if (bidAmount <= currentHighestBid)
-            return "Giá phải lớn hơn giá hiện tại";
+        if (bidAmount < currentHighestBid + MIN_BID_INCREMENT)
+            return "Phải tăng ít nhất " + MIN_BID_INCREMENT + " VNĐ";
         if (bidder.getBalance() < bidAmount)
             return "Không đủ tiền";
 
