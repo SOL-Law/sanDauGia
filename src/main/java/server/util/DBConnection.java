@@ -6,23 +6,27 @@ import java.sql.DriverManager;
 public class DBConnection {
     public static Connection getConnection() {
         try {
-            // Nhớ sửa 'root' cuối cùng thành mật khẩu MySQL của đại ca
-            // 'sanDauGia' là tên Database  tạo trong MySQL Workbench
-            String url = "jdbc:mysql://localhost:3306/sanDauGia";
+            // Lấy từ MYSQL_PUBLIC_URL của Railway
+            String host = "mainline.proxy.rlwy.net";
+            String port = "17571";
+            String dbName = "railway";
             String user = "root";
-            String pass = "123456";
+            String pass = "DVWWYfCJZheQAAqasoyZxXgGXFeLteFl";
+
+            // Lắp ráp lại thành URL chuẩn của Java JDBC
+            String url = "jdbc:mysql://" + host + ":" + port + "/" + dbName;
 
             Connection conn = DriverManager.getConnection(url, user, pass);
-            System.out.println("✅ Ngon! Ống hút đã thông xuống Database!");
+            System.out.println("✅ Ngon! Ống hút đã thông lên CLOUD DATABASE!");
             return conn;
         } catch (Exception e) {
-            System.out.println("❌ Oẳng! Kiểm tra lại mật khẩu hoặc tên DB đi đại ca.");
+            System.out.println("❌ Oẳng! Lỗi kết nối Cloud rồi!");
             e.printStackTrace();
             return null;
         }
     }
 
     public static void main(String[] args) {
-        getConnection(); // Chạy thử phát xem có ra chữ Xanh không
+        getConnection(); // Chạy thử cái này xem có ra chữ Xanh không nhé!
     }
 }
