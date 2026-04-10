@@ -13,6 +13,18 @@ public class Auction extends Entity {
     public Auction() {
         super();
     }
+    private String validateBid(User bidder, double bidAmount) {
+        if (bidder == null) return "Người dùng không hợp lệ";
+        if (!isActive) return "Phiên đã kết thúc";
+        if (highestBidder != null && bidder.equals(highestBidder))
+            return "Bạn đang là người trả giá cao nhất";
+        if (bidAmount <= currentHighestBid)
+            return "Giá phải lớn hơn giá hiện tại";
+        if (bidder.getBalance() < bidAmount)
+            return "Không đủ tiền";
+
+        return null;
+    }
 
     public Auction(int id, Item item) {
         super(id);
@@ -33,34 +45,12 @@ public class Auction extends Entity {
     // =========================
     public boolean placeBid(User bidder, double bidAmount) {
 
-        // Check null
-        if (bidder == null) {
-            System.out.println("Lỗi: Người dùng không hợp lệ.");
+        String error = validateBid(bidder, bidAmount);
+        if (error != null) {
+            System.out.println("Lỗi: " + error);
             return false;
         }
 
-        if (!isActive) {
-            System.out.println("Phiên đã kết thúc.");
-            return false;
-        }
-
-        // Không cho người đang top tự bid
-        if (highestBidder != null && bidder.equals(highestBidder)) {
-            System.out.println("Bạn đang là người trả giá cao nhất rồi.");
-            return false;
-        }
-
-        if (bidAmount <= currentHighestBid) {
-            System.out.printf("Giá phải > %,.0f VNĐ\n", currentHighestBid);
-            return false;
-        }
-
-        if (bidder.getBalance() < bidAmount) {
-            System.out.println("Không đủ tiền.");
-            return false;
-        }
-
-        // Cập nhật
         currentHighestBid = bidAmount;
         highestBidder = bidder;
         item.setCurrentPrice(bidAmount);
