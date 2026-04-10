@@ -45,7 +45,7 @@ public class Auction extends Entity {
         }
 
         // Không cho người đang top tự bid
-        if (bidder.equals(highestBidder)) {
+        if (highestBidder != null && bidder.equals(highestBidder)) {
             System.out.println("Bạn đang là người trả giá cao nhất rồi.");
             return false;
         }
