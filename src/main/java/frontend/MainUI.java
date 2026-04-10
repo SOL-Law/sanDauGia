@@ -11,6 +11,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 public class MainUI {
+    private static AuctionUI auctionUI;
 
     private static PrintWriter out;
     private static BufferedReader in;
@@ -55,8 +56,14 @@ public class MainUI {
 
                         // Xử lý các phản hồi từ Server
                         if (response.getAction().equals("LOGIN_SUCCESS")) {
-                            JOptionPane.showMessageDialog(frame, "Đăng nhập thành công! Chuẩn bị vào phòng...");
+                            JOptionPane.showMessageDialog(frame, "Đăng nhập thành công!");
 
+                            // MỞ MÀN HÌNH ĐẤU GIÁ
+                            auctionUI = new AuctionUI(out, gson);
+                            auctionUI.setVisible(true);
+
+                            // ĐÓNG MÀN LOGIN
+                            frame.dispose();
                         } else if (response.getAction().equals("REGISTER_SUCCESS")) {
                             // THÊM: Báo thành công khi đăng ký
                             JOptionPane.showMessageDialog(frame, "Tạo tài khoản thành công! Bạn có thể Login ngay.");
