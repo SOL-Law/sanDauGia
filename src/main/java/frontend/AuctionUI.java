@@ -11,15 +11,10 @@ import java.io.PrintWriter;
 public class AuctionUI extends JFrame {
 
     private JTable table;
-    private DefaultTableModel tableModel;
+    private DefaultTableModel model;
 
-    private JLabel lblItem;
-    private JLabel lblPrice;
-    private JLabel lblLeader;
-
-    private JTextField txtBid;
-    private JButton btnBid;
-    private JButton btnRefresh;
+    private JTextField bidField;
+    private JButton bidButton;
 
     private PrintWriter out;
     private Gson gson;
@@ -28,92 +23,107 @@ public class AuctionUI extends JFrame {
         this.out = out;
         this.gson = gson;
 
-        setTitle("Phòng đấu giá");
+        setTitle("Phòng đấu giá (Realtime)");
         setSize(700, 500);
         setLocationRelativeTo(null);
-        setLayout(new BorderLayout());
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
         initUI();
     }
 
     private void initUI() {
 
-        // ===== TABLE ITEM =====
-        String[] columns = {"Item", "Giá hiện tại", "Người dẫn đầu"};
-        tableModel = new DefaultTableModel(columns, 0);
+        // ===== BACKGROUND =====
+        ImageIcon bg = new ImageIcon("src/main/java/frontend/background2.jpg");
+        JLabel background = new JLabel(bg);
+        background.setLayout(new BorderLayout());
 
-        table = new JTable(tableModel);
-        add(new JScrollPane(table), BorderLayout.CENTER);
+        // ===== TABLE =====
+        String[] columns = {"Item", "Price", "Leader"};
+        model = new DefaultTableModel(columns, 0);
 
-        // ===== PANEL CHI TIẾT =====
-        JPanel infoPanel = new JPanel(new GridLayout(3, 1));
-        lblItem = new JLabel("Item: ");
-        lblPrice = new JLabel("Giá: ");
-        lblLeader = new JLabel("Leader: ");
+        table = new JTable(model);
+        JScrollPane scrollPane = new JScrollPane(table);
 
-        infoPanel.add(lblItem);
-        infoPanel.add(lblPrice);
-        infoPanel.add(lblLeader);
+        // làm trong suốt
+        scrollPane.setOpaque(false);
+        scrollPane.getViewport().setOpaque(false);
 
-        add(infoPanel, BorderLayout.NORTH);
-
-        // ===== PANEL BID =====
+        // ===== PANEL BOTTOM =====
         JPanel bottomPanel = new JPanel();
+        bottomPanel.setOpaque(false); // 🔥 trong suốt
 
-        txtBid = new JTextField(10);
-        btnBid = new JButton("Đặt giá");
-        btnRefresh = new JButton("Refresh");
+        JLabel label = new JLabel("Nhập giá:");
+        label.setForeground(Color.WHITE);
 
-        bottomPanel.add(new JLabel("Giá:"));
-        bottomPanel.add(txtBid);
-        bottomPanel.add(btnBid);
-        bottomPanel.add(btnRefresh);
+        bidField = new JTextField(10);
 
-        add(bottomPanel, BorderLayout.SOUTH);
+        bidButton = new JButton("Đặt giá");
 
-        // ===== EVENT =====
-        table.getSelectionModel().addListSelectionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row != -1) {
-                lblItem.setText("Item: " + tableModel.getValueAt(row, 0));
-                lblPrice.setText("Giá: " + tableModel.getValueAt(row, 1));
-                lblLeader.setText("Leader: " + tableModel.getValueAt(row, 2));
-            }
-        });
+        bottomPanel.add(label);
+        bottomPanel.add(bidField);
+        bottomPanel.add(bidButton);
 
-        btnBid.addActionListener(e -> {
-            int row = table.getSelectedRow();
-            if (row == -1) {
-                JOptionPane.showMessageDialog(this, "Chọn item trước!");
-                return;
-            }
+        // ===== BUTTON =====
+        bidButton.addActionListener(e -> placeBid());
 
-            String price = txtBid.getText();
-            String item = tableModel.getValueAt(row, 0).toString();
+        // ===== ADD =====
+        background.add(scrollPane, BorderLayout.CENTER);
+        background.add(bottomPanel, BorderLayout.SOUTH);
 
-            String payload = String.format("{\"item\":\"%s\", \"price\":%s}", item, price);
-            Request req = new Request("PLACE_BID", payload);
-
-            out.println(gson.toJson(req));
-        });
-
-        btnRefresh.addActionListener(e -> {
-            Request req = new Request("GET_AUCTION", "");
-            out.println(gson.toJson(req));
-        });
+        setContentPane(background);
     }
 
-    // ===== UPDATE TỪ SERVER =====
-    public void updateAuctionInfo(String data) {
-        tableModel.setRowCount(0);
+    // =========================
+    // PLACE BID
+    // =========================
+    private void placeBid() {
+        int row = table.getSelectedRow();
 
-        // format: item|price|leader;item|price|leader
-        String[] items = data.split(";");
-        for (String i : items) {
-            String[] parts = i.split("\\|");
-            if (parts.length == 3) {
-                tableModel.addRow(parts);
-            }
+        if (row == -1) {
+            JOptionPane.showMessageDialog(this, "Chọn item trước!");
+            return;
         }
+
+        String item = model.getValueAt(row, 0).toString();
+
+        try {
+            int price = Integer.parseInt(bidField.getText());
+
+            String payload = String.format(
+                    "{\"item\":\"%s\",\"price\":%d,\"user\":\"client\"}",
+                    item, price
+            );
+
+            Request req = new Request("PLACE_BID", payload);
+            out.println(gson.toJson(req));
+
+        } catch (Exception ex) {
+            JOptionPane.showMessageDialog(this, "Giá không hợp lệ!");
+        }
+    }
+
+    // =========================
+    // UPDATE UI
+    // =========================
+    public void updateAuctionInfo(String data) {
+
+        SwingUtilities.invokeLater(() -> {
+            model.setRowCount(0);
+
+            String[] items = data.split(";");
+
+            for (String item : items) {
+                if (item.isEmpty()) continue;
+
+                String[] parts = item.split("\\|");
+
+                model.addRow(new Object[]{
+                        parts[0],
+                        parts[1],
+                        parts[2]
+                });
+            }
+        });
     }
 }

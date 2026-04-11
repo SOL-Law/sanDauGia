@@ -13,6 +13,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 public class ClientHandler implements Runnable {
+
     private final Socket socket;
     private BufferedReader in;
     private PrintWriter out;
@@ -21,6 +22,7 @@ public class ClientHandler implements Runnable {
     public ClientHandler(Socket socket) {
         this.socket = socket;
         this.gson = new Gson();
+
         try {
             this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.out = new PrintWriter(socket.getOutputStream(), true);
@@ -31,10 +33,11 @@ public class ClientHandler implements Runnable {
 
     @Override
     public void run() {
+
         try {
             String jsonReceived;
 
-            // 🔥 lấy manager (Singleton)
+            // 🔥 Singleton AuctionManager
             AuctionManager manager = AuctionManager.getInstance();
 
             while ((jsonReceived = in.readLine()) != null) {
@@ -71,7 +74,7 @@ public class ClientHandler implements Runnable {
                         break;
 
                     // =========================
-                    // GET AUCTION
+                    // LOAD DATA BAN ĐẦU
                     // =========================
                     case "GET_AUCTION":
                         String data = manager.getAllItems();
@@ -83,22 +86,36 @@ public class ClientHandler implements Runnable {
                     // =========================
                     case "PLACE_BID":
 
+                        // ❗ nếu phiên đã kết thúc
+                        if (!manager.isRunning()) {
+                            sendMessage(gson.toJson(
+                                    new Request("ERROR", "Phiên đấu giá đã kết thúc!")
+                            ));
+                            break;
+                        }
+
                         JsonObject obj = gson.fromJson(req.getPayload(), JsonObject.class);
+
                         String item = obj.get("item").getAsString();
                         int price = obj.get("price").getAsInt();
 
+                        // giả lập user
                         String username = "user" + socket.getPort();
 
                         boolean success = manager.placeBid(item, price, username);
 
                         if (success) {
-                            // 🔥 realtime broadcast
+
+                            // 🔥 realtime broadcast cho toàn bộ client
                             String newData = manager.getAllItems();
                             Request res = new Request("AUCTION_UPDATE", newData);
 
                             AuctionServer.broadcast(gson.toJson(res));
+
                         } else {
-                            sendMessage(gson.toJson(new Request("ERROR", "Giá phải cao hơn!")));
+                            sendMessage(gson.toJson(
+                                    new Request("ERROR", "Giá phải cao hơn giá hiện tại!")
+                            ));
                         }
 
                         break;
@@ -117,7 +134,12 @@ public class ClientHandler implements Runnable {
         }
     }
 
+    // =========================
+    // SEND MESSAGE
+    // =========================
     public void sendMessage(String jsonMessage) {
-        out.println(jsonMessage);
+        if (out != null) {
+            out.println(jsonMessage);
+        }
     }
 }

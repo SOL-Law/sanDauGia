@@ -77,6 +77,16 @@ public class MainUI {
                                 auctionUI.updateAuctionInfo(response.getPayload());
                             }
 
+                        } else if (response.getAction().equals("UPDATE_PRICE")) {
+
+                            if (auctionUI != null) {
+                                auctionUI.updateAuctionInfo(response.getPayload());
+                            }
+
+                        } else if (response.getAction().equals("AUCTION_END")) {
+
+                            JOptionPane.showMessageDialog(frame, response.getPayload());
+
                         } else if (response.getAction().equals("REGISTER_SUCCESS")) {
 
                             JOptionPane.showMessageDialog(frame, "Tạo tài khoản thành công!");
