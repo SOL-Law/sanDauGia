@@ -9,14 +9,15 @@ public class User extends Entity {
     private String email;
     private double balance;
 
-    // 🔥 NEW: ROLE
+    // 🔥 ROLE
     private String role;
 
     public User() {
         super();
-        this.role = "BIDDER"; // mặc định
+        this.role = "BIDDER";
     }
 
+    // 🔥 Constructor đầy đủ (có role)
     public User(int id, String username, String password, String email, String role) {
         super(id);
         this.setUsername(username);
@@ -24,6 +25,16 @@ public class User extends Entity {
         this.setEmail(email);
         this.balance = 0.0;
         this.setRole(role);
+    }
+
+    // 🔥 FIX: thêm constructor 4 tham số (QUAN TRỌNG)
+    public User(int id, String username, String password, String email) {
+        super(id);
+        this.setUsername(username);
+        this.setPassword(password);
+        this.setEmail(email);
+        this.balance = 0.0;
+        this.role = "BIDDER"; // mặc định
     }
 
     // =========================
@@ -67,7 +78,9 @@ public class User extends Entity {
         return balance;
     }
 
-    // 🔥 ROLE
+    // =========================
+    // ROLE
+    // =========================
     public String getRole() {
         return role;
     }

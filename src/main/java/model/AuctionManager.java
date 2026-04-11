@@ -46,6 +46,18 @@ public class AuctionManager {
     }
 
     // =========================
+    // 🔥 ADD ITEM (SELLER)
+    // =========================
+    public synchronized void addItem(String name, int startPrice) {
+
+        int newId = items.size() + 1;
+
+        items.put(newId, new BidInfo(name, startPrice, "none"));
+
+        System.out.println("🆕 Thêm sản phẩm: " + name + " | Giá: " + startPrice);
+    }
+
+    // =========================
     // GET DATA
     // =========================
     public synchronized String getAllItems() {

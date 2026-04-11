@@ -9,56 +9,70 @@ import java.sql.ResultSet;
 public class UserDao {
 
     // ==========================================
-    // 1. HÀM ĐĂNG NHẬP (Kết nối MySQL)
+    // LOGIN (TRẢ VỀ ROLE)
     // ==========================================
-    public static boolean login(String username, String password) {
+    public static String login(String username, String password) {
         try (Connection conn = DBConnection.getConnection()) {
-            String sql = "SELECT * FROM users WHERE username = ? AND password = ?";
+
+            String sql = "SELECT role FROM users WHERE username = ? AND password = ?";
             PreparedStatement pst = conn.prepareStatement(sql);
+
             pst.setString(1, username);
             pst.setString(2, password);
 
             ResultSet rs = pst.executeQuery();
+
             if (rs.next()) {
-                System.out.println("🗄️ [DATABASE]: Đã xác minh tài khoản: " + username);
-                return true;
+                String role = rs.getString("role");
+
+                System.out.println("🗄️ Login OK: " + username + " | Role: " + role);
+                return role; // 🔥 trả role
             }
+
         } catch (Exception e) {
             System.out.println("Lỗi Database: " + e.getMessage());
         }
-        return false;
+
+        return null; // login fail
     }
 
     // ==========================================
-    // 2. HÀM ĐĂNG KÝ (Kết nối MySQL)
+    // REGISTER
     // ==========================================
     public static boolean register(String username, String password) {
         try (Connection conn = DBConnection.getConnection()) {
-            // Bước 1: Kiểm tra xem tên đăng nhập đã ai dùng chưa
+
+            // check trùng username
             String checkSql = "SELECT * FROM users WHERE username = ?";
             PreparedStatement checkStmt = conn.prepareStatement(checkSql);
             checkStmt.setString(1, username);
+
             ResultSet rs = checkStmt.executeQuery();
 
             if (rs.next()) {
-                return false; // Tên đã tồn tại trong MySQL -> Từ chối!
+                return false;
             }
 
-            // Bước 2: Nếu chưa ai dùng, lưu tài khoản mới vào MySQL
-            String insertSql = "INSERT INTO users (username, password, email) VALUES (?, ?, ?)";
+            // insert user (role mặc định BIDDER)
+            String insertSql = "INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, ?)";
             PreparedStatement insertStmt = conn.prepareStatement(insertSql);
+
             insertStmt.setString(1, username);
             insertStmt.setString(2, password);
-            insertStmt.setString(3, "newuser@email.com"); // Email mặc định
+            insertStmt.setString(3, "newuser@email.com");
+            insertStmt.setString(4, "BIDDER"); // 🔥 mặc định
 
             int rows = insertStmt.executeUpdate();
+
             if (rows > 0) {
-                System.out.println("🗄️ [DATABASE]: Đã tạo tài khoản mới: " + username);
+                System.out.println("🗄️ Tạo user: " + username);
                 return true;
             }
+
         } catch (Exception e) {
             System.out.println("Lỗi Database khi đăng ký: " + e.getMessage());
         }
+
         return false;
     }
 }

@@ -1,6 +1,7 @@
 package frontend;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import network.Request;
 
 import javax.swing.*;
@@ -11,6 +12,7 @@ import java.io.PrintWriter;
 import java.net.Socket;
 
 public class MainUI {
+
     private static AuctionUI auctionUI;
 
     private static PrintWriter out;
@@ -23,7 +25,7 @@ public class MainUI {
         frame.setSize(800, 600);
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
-        // Load ảnh nền
+        // ===== BACKGROUND =====
         ImageIcon backgroundImage = new ImageIcon("src/main/java/frontend/background.jpg");
         JLabel background = new JLabel(backgroundImage);
         background.setLayout(new FlowLayout());
@@ -40,64 +42,87 @@ public class MainUI {
         JButton registerButton = new JButton("Register");
 
         // ==========================================
-        // 1. KẾT NỐI SERVER
+        // CONNECT SERVER
         // ==========================================
         try {
             Socket socket = new Socket("localhost", 8888);
+
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
 
             new Thread(() -> {
                 try {
                     String fromServer;
+
                     while ((fromServer = in.readLine()) != null) {
+
                         Request response = gson.fromJson(fromServer, Request.class);
 
-                        // =========================
-                        // XỬ LÝ RESPONSE
-                        // =========================
-                        if (response.getAction().equals("LOGIN_SUCCESS")) {
+                        switch (response.getAction()) {
 
-                            JOptionPane.showMessageDialog(frame, "Đăng nhập thành công!");
+                            // =========================
+                            // LOGIN SUCCESS (🔥 FIX ROLE)
+                            // =========================
+                            case "LOGIN_SUCCESS":
 
-                            // mở UI đấu giá
-                            auctionUI = new AuctionUI(out, gson);
-                            auctionUI.setVisible(true);
+                                JsonObject obj = gson.fromJson(response.getPayload(), JsonObject.class);
+                                String role = obj.get("role").getAsString();
 
-                            // đóng login
-                            frame.dispose();
+                                JOptionPane.showMessageDialog(frame, "Đăng nhập thành công! Role: " + role);
 
-                            // lấy dữ liệu đấu giá
-                            Request req = new Request("GET_AUCTION", "");
-                            out.println(gson.toJson(req));
+                                // mở UI
+                                auctionUI = new AuctionUI(out, gson);
+                                auctionUI.setVisible(true);
 
-                        } else if (response.getAction().equals("AUCTION_UPDATE")) {
+                                frame.dispose();
 
-                            if (auctionUI != null) {
-                                auctionUI.updateAuctionInfo(response.getPayload());
-                            }
+                                // load data
+                                out.println(gson.toJson(new Request("GET_AUCTION", "")));
 
-                        } else if (response.getAction().equals("UPDATE_PRICE")) {
+                                break;
 
-                            if (auctionUI != null) {
-                                auctionUI.updateAuctionInfo(response.getPayload());
-                            }
+                            // =========================
+                            // UPDATE
+                            // =========================
+                            case "AUCTION_UPDATE":
 
-                        } else if (response.getAction().equals("AUCTION_END")) {
+                                if (auctionUI != null) {
+                                    auctionUI.updateAuctionInfo(response.getPayload());
+                                }
 
-                            JOptionPane.showMessageDialog(frame, response.getPayload());
+                                break;
 
-                        } else if (response.getAction().equals("REGISTER_SUCCESS")) {
+                            // =========================
+                            // AUCTION END (🔥 FIX)
+                            // =========================
+                            case "AUCTION_END":
 
-                            JOptionPane.showMessageDialog(frame, "Tạo tài khoản thành công!");
+                                if (auctionUI != null) {
+                                    auctionUI.auctionEnded(response.getPayload());
+                                }
 
-                        } else if (response.getAction().equals("ERROR")) {
+                                break;
 
-                            JOptionPane.showMessageDialog(frame, response.getPayload(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+                            // =========================
+                            // REGISTER
+                            // =========================
+                            case "REGISTER_SUCCESS":
+
+                                JOptionPane.showMessageDialog(frame, "Tạo tài khoản thành công!");
+                                break;
+
+                            // =========================
+                            // ERROR
+                            // =========================
+                            case "ERROR":
+
+                                JOptionPane.showMessageDialog(frame, response.getPayload(), "Lỗi", JOptionPane.ERROR_MESSAGE);
+                                break;
                         }
                     }
+
                 } catch (Exception ex) {
-                    System.out.println("Mất kết nối với Server.");
+                    System.out.println("Mất kết nối server!");
                 }
             }).start();
 
@@ -109,18 +134,23 @@ public class MainUI {
         // LOGIN
         // ==========================================
         loginButton.addActionListener(e -> {
+
             String username = usernameField.getText();
             String password = new String(passwordField.getPassword());
 
             if (out != null) {
+
                 if (username.isEmpty() || password.isEmpty()) {
                     JOptionPane.showMessageDialog(frame, "Nhập đủ thông tin!");
                     return;
                 }
 
-                String payload = String.format("{\"username\":\"%s\", \"password\":\"%s\"}", username, password);
-                Request loginReq = new Request("LOGIN", payload);
-                out.println(gson.toJson(loginReq));
+                String payload = String.format(
+                        "{\"username\":\"%s\",\"password\":\"%s\"}",
+                        username, password
+                );
+
+                out.println(gson.toJson(new Request("LOGIN", payload)));
             }
         });
 
@@ -128,22 +158,27 @@ public class MainUI {
         // REGISTER
         // ==========================================
         registerButton.addActionListener(e -> {
+
             String username = usernameField.getText();
             String password = new String(passwordField.getPassword());
 
             if (out != null) {
+
                 if (username.isEmpty() || password.isEmpty()) {
                     JOptionPane.showMessageDialog(frame, "Nhập đủ thông tin!");
                     return;
                 }
 
-                String payload = String.format("{\"username\":\"%s\", \"password\":\"%s\"}", username, password);
-                Request regReq = new Request("REGISTER", payload);
-                out.println(gson.toJson(regReq));
+                String payload = String.format(
+                        "{\"username\":\"%s\",\"password\":\"%s\"}",
+                        username, password
+                );
+
+                out.println(gson.toJson(new Request("REGISTER", payload)));
             }
         });
 
-        // UI
+        // ===== UI =====
         background.add(userLabel);
         background.add(usernameField);
         background.add(passLabel);

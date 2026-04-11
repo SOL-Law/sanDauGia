@@ -37,7 +37,6 @@ public class ClientHandler implements Runnable {
         try {
             String jsonReceived;
 
-            // 🔥 Singleton AuctionManager
             AuctionManager manager = AuctionManager.getInstance();
 
             while ((jsonReceived = in.readLine()) != null) {
@@ -48,16 +47,30 @@ public class ClientHandler implements Runnable {
                 switch (req.getAction()) {
 
                     // =========================
-                    // LOGIN
+                    // LOGIN (🔥 FIX ROLE)
                     // =========================
                     case "LOGIN":
-                        User userLogin = gson.fromJson(req.getPayload(), User.class);
 
-                        if (UserDao.login(userLogin.getUsername(), userLogin.getPassword())) {
-                            sendMessage(gson.toJson(new Request("LOGIN_SUCCESS", "")));
+                        JsonObject loginObj = gson.fromJson(req.getPayload(), JsonObject.class);
+
+                        String usernameLogin = loginObj.get("username").getAsString();
+                        String passwordLogin = loginObj.get("password").getAsString();
+
+                        String role = UserDao.login(usernameLogin, passwordLogin);
+
+                        if (role != null) {
+
+                            JsonObject res = new JsonObject();
+                            res.addProperty("role", role);
+
+                            sendMessage(gson.toJson(
+                                    new Request("LOGIN_SUCCESS", res.toString())
+                            ));
+
                         } else {
                             sendMessage(gson.toJson(new Request("ERROR", "Sai tài khoản!")));
                         }
+
                         break;
 
                     // =========================
@@ -74,7 +87,7 @@ public class ClientHandler implements Runnable {
                         break;
 
                     // =========================
-                    // LOAD DATA BAN ĐẦU
+                    // LOAD DATA
                     // =========================
                     case "GET_AUCTION":
                         String data = manager.getAllItems();
@@ -86,7 +99,6 @@ public class ClientHandler implements Runnable {
                     // =========================
                     case "PLACE_BID":
 
-                        // ❗ nếu phiên đã kết thúc
                         if (!manager.isRunning()) {
                             sendMessage(gson.toJson(
                                     new Request("ERROR", "Phiên đấu giá đã kết thúc!")
@@ -99,24 +111,41 @@ public class ClientHandler implements Runnable {
                         String item = obj.get("item").getAsString();
                         int price = obj.get("price").getAsInt();
 
-                        // giả lập user
                         String username = "user" + socket.getPort();
 
                         boolean success = manager.placeBid(item, price, username);
 
                         if (success) {
 
-                            // 🔥 realtime broadcast cho toàn bộ client
                             String newData = manager.getAllItems();
-                            Request res = new Request("AUCTION_UPDATE", newData);
+                            Request resUpdate = new Request("AUCTION_UPDATE", newData);
 
-                            AuctionServer.broadcast(gson.toJson(res));
+                            AuctionServer.broadcast(gson.toJson(resUpdate));
 
                         } else {
                             sendMessage(gson.toJson(
                                     new Request("ERROR", "Giá phải cao hơn giá hiện tại!")
                             ));
                         }
+
+                        break;
+
+                    // =========================
+                    // ADD ITEM (🔥 NEW)
+                    // =========================
+                    case "ADD_ITEM":
+
+                        JsonObject addObj = gson.fromJson(req.getPayload(), JsonObject.class);
+
+                        String name = addObj.get("item").getAsString();
+                        int startPrice = addObj.get("price").getAsInt();
+
+                        manager.addItem(name, startPrice);
+
+                        String newData = manager.getAllItems();
+                        Request resAdd = new Request("AUCTION_UPDATE", newData);
+
+                        AuctionServer.broadcast(gson.toJson(resAdd));
 
                         break;
                 }
@@ -134,9 +163,6 @@ public class ClientHandler implements Runnable {
         }
     }
 
-    // =========================
-    // SEND MESSAGE
-    // =========================
     public void sendMessage(String jsonMessage) {
         if (out != null) {
             out.println(jsonMessage);
