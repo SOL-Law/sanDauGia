@@ -9,23 +9,31 @@ public class User extends Entity {
     private String email;
     private double balance;
 
+    // 🔥 NEW: ROLE
+    private String role;
+
     public User() {
         super();
+        this.role = "BIDDER"; // mặc định
     }
 
-    public User(int id, String username, String password, String email) {
+    public User(int id, String username, String password, String email, String role) {
         super(id);
         this.setUsername(username);
         this.setPassword(password);
         this.setEmail(email);
         this.balance = 0.0;
+        this.setRole(role);
     }
+
+    // =========================
+    // GETTER / SETTER
+    // =========================
 
     public String getUsername() {
         return username;
     }
 
-    // Validate username
     public void setUsername(String username) {
         if (username == null || username.trim().isEmpty()) {
             throw new IllegalArgumentException("Username không hợp lệ.");
@@ -37,7 +45,6 @@ public class User extends Entity {
         return password;
     }
 
-    // Validate password (cơ bản)
     public void setPassword(String password) {
         if (password == null || password.length() < 6) {
             throw new IllegalArgumentException("Password phải >= 6 ký tự.");
@@ -49,7 +56,6 @@ public class User extends Entity {
         return email;
     }
 
-    // Validate email đơn giản
     public void setEmail(String email) {
         if (email == null || !email.contains("@")) {
             throw new IllegalArgumentException("Email không hợp lệ.");
@@ -59,6 +65,26 @@ public class User extends Entity {
 
     public double getBalance() {
         return balance;
+    }
+
+    // 🔥 ROLE
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        if (role == null) {
+            this.role = "BIDDER";
+            return;
+        }
+
+        role = role.toUpperCase();
+
+        if (!role.equals("BIDDER") && !role.equals("SELLER") && !role.equals("ADMIN")) {
+            throw new IllegalArgumentException("Role không hợp lệ.");
+        }
+
+        this.role = role;
     }
 
     // =========================
@@ -94,7 +120,7 @@ public class User extends Entity {
     }
 
     // =========================
-    // DEBUG (KHÔNG in password)
+    // DEBUG
     // =========================
     @Override
     public String toString() {
@@ -102,6 +128,7 @@ public class User extends Entity {
                 "id=" + getId() +
                 ", username='" + username + '\'' +
                 ", email='" + email + '\'' +
+                ", role='" + role + '\'' +
                 ", balance=" + String.format("%,.0f VNĐ", balance) +
                 '}';
     }
