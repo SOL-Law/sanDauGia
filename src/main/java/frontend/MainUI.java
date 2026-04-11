@@ -37,11 +37,10 @@ public class MainUI {
         JPasswordField passwordField = new JPasswordField(20);
 
         JButton loginButton = new JButton("Login");
-        // THÊM: Nút Đăng ký
         JButton registerButton = new JButton("Register");
 
         // ==========================================
-        // 1. KẾT NỐI SERVER NGAY KHI VỪA MỞ APP
+        // 1. KẾT NỐI SERVER
         // ==========================================
         try {
             Socket socket = new Socket("localhost", 8888);
@@ -54,21 +53,36 @@ public class MainUI {
                     while ((fromServer = in.readLine()) != null) {
                         Request response = gson.fromJson(fromServer, Request.class);
 
-                        // Xử lý các phản hồi từ Server
+                        // =========================
+                        // XỬ LÝ RESPONSE
+                        // =========================
                         if (response.getAction().equals("LOGIN_SUCCESS")) {
+
                             JOptionPane.showMessageDialog(frame, "Đăng nhập thành công!");
 
-                            // MỞ MÀN HÌNH ĐẤU GIÁ
+                            // mở UI đấu giá
                             auctionUI = new AuctionUI(out, gson);
                             auctionUI.setVisible(true);
 
-                            // ĐÓNG MÀN LOGIN
+                            // đóng login
                             frame.dispose();
+
+                            // lấy dữ liệu đấu giá
+                            Request req = new Request("GET_AUCTION", "");
+                            out.println(gson.toJson(req));
+
+                        } else if (response.getAction().equals("AUCTION_UPDATE")) {
+
+                            if (auctionUI != null) {
+                                auctionUI.updateAuctionInfo(response.getPayload());
+                            }
+
                         } else if (response.getAction().equals("REGISTER_SUCCESS")) {
-                            // THÊM: Báo thành công khi đăng ký
-                            JOptionPane.showMessageDialog(frame, "Tạo tài khoản thành công! Bạn có thể Login ngay.");
+
+                            JOptionPane.showMessageDialog(frame, "Tạo tài khoản thành công!");
 
                         } else if (response.getAction().equals("ERROR")) {
+
                             JOptionPane.showMessageDialog(frame, response.getPayload(), "Lỗi", JOptionPane.ERROR_MESSAGE);
                         }
                     }
@@ -78,11 +92,11 @@ public class MainUI {
             }).start();
 
         } catch (Exception ex) {
-            JOptionPane.showMessageDialog(frame, "Không thể kết nối đến Server. Vui lòng bật AuctionServer trước!", "Lỗi Mạng", JOptionPane.ERROR_MESSAGE);
+            JOptionPane.showMessageDialog(frame, "Không thể kết nối đến Server!", "Lỗi", JOptionPane.ERROR_MESSAGE);
         }
 
         // ==========================================
-        // 2. SỰ KIỆN KHI BẤM NÚT LOGIN
+        // LOGIN
         // ==========================================
         loginButton.addActionListener(e -> {
             String username = usernameField.getText();
@@ -90,9 +104,10 @@ public class MainUI {
 
             if (out != null) {
                 if (username.isEmpty() || password.isEmpty()) {
-                    JOptionPane.showMessageDialog(frame, "Vui lòng nhập đủ Username và Password!");
+                    JOptionPane.showMessageDialog(frame, "Nhập đủ thông tin!");
                     return;
                 }
+
                 String payload = String.format("{\"username\":\"%s\", \"password\":\"%s\"}", username, password);
                 Request loginReq = new Request("LOGIN", payload);
                 out.println(gson.toJson(loginReq));
@@ -100,7 +115,7 @@ public class MainUI {
         });
 
         // ==========================================
-        // 3. SỰ KIỆN KHI BẤM NÚT REGISTER (ĐĂNG KÝ)
+        // REGISTER
         // ==========================================
         registerButton.addActionListener(e -> {
             String username = usernameField.getText();
@@ -108,23 +123,23 @@ public class MainUI {
 
             if (out != null) {
                 if (username.isEmpty() || password.isEmpty()) {
-                    JOptionPane.showMessageDialog(frame, "Vui lòng nhập đủ Username và Password để đăng ký!");
+                    JOptionPane.showMessageDialog(frame, "Nhập đủ thông tin!");
                     return;
                 }
-                // Gửi chữ "REGISTER" lên Server
+
                 String payload = String.format("{\"username\":\"%s\", \"password\":\"%s\"}", username, password);
                 Request regReq = new Request("REGISTER", payload);
                 out.println(gson.toJson(regReq));
             }
         });
 
-        // Gắn đồ lên màn hình
+        // UI
         background.add(userLabel);
         background.add(usernameField);
         background.add(passLabel);
         background.add(passwordField);
         background.add(loginButton);
-        background.add(registerButton); // Gắn nút Đăng ký lên màn hình
+        background.add(registerButton);
 
         frame.setContentPane(background);
         frame.setVisible(true);
