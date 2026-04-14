@@ -36,7 +36,6 @@ public class ClientHandler implements Runnable {
 
         try {
             String jsonReceived;
-
             AuctionManager manager = AuctionManager.getInstance();
 
             while ((jsonReceived = in.readLine()) != null) {
@@ -47,30 +46,22 @@ public class ClientHandler implements Runnable {
                 switch (req.getAction()) {
 
                     // =========================
-                    // LOGIN (🔥 FIX ROLE)
+                    // LOGIN
                     // =========================
                     case "LOGIN":
-
                         JsonObject loginObj = gson.fromJson(req.getPayload(), JsonObject.class);
-
                         String usernameLogin = loginObj.get("username").getAsString();
                         String passwordLogin = loginObj.get("password").getAsString();
 
                         String role = UserDao.login(usernameLogin, passwordLogin);
 
                         if (role != null) {
-
                             JsonObject res = new JsonObject();
                             res.addProperty("role", role);
-
-                            sendMessage(gson.toJson(
-                                    new Request("LOGIN_SUCCESS", res.toString())
-                            ));
-
+                            sendMessage(gson.toJson(new Request("LOGIN_SUCCESS", res.toString())));
                         } else {
-                            sendMessage(gson.toJson(new Request("ERROR", "Sai tài khoản!")));
+                            sendMessage(gson.toJson(new Request("ERROR", "Sai tài khoản hoặc mật khẩu!")));
                         }
-
                         break;
 
                     // =========================
@@ -95,58 +86,53 @@ public class ClientHandler implements Runnable {
                         break;
 
                     // =========================
-                    // PLACE BID
+                    // PLACE BID (🔥 FIX CHUẨN ĐỒNG BỘ VỚI ĐỒNG ĐỘI)
                     // =========================
                     case "PLACE_BID":
-
+                        // 1. Kiểm tra xem phiên đấu giá còn chạy không
                         if (!manager.isRunning()) {
-                            sendMessage(gson.toJson(
-                                    new Request("ERROR", "Phiên đấu giá đã kết thúc!")
-                            ));
+                            sendMessage(gson.toJson(new Request("ERROR", "Phiên đấu giá đã kết thúc!")));
                             break;
                         }
 
+                        // 2. Đọc dữ liệu Client gửi lên
                         JsonObject obj = gson.fromJson(req.getPayload(), JsonObject.class);
+                        String itemName = obj.get("item").getAsString();
+                        int price = obj.get("price").getAsInt(); // Đã sửa thành getAsInt để khớp với AuctionManager
 
-                        String item = obj.get("item").getAsString();
-                        int price = obj.get("price").getAsInt();
-
+                        // 3. Tạo username tạm dựa vào cổng kết nối
                         String username = "user" + socket.getPort();
 
-                        boolean success = manager.placeBid(item, price, username);
+                        // 4. Gọi thẳng hàm placeBid của đồng đội (Hàm này đã có sẵn synchronized chống dẫm đạp)
+                        boolean success = manager.placeBid(itemName, price, username);
 
                         if (success) {
-
+                            // Nếu đặt giá thành công -> Cập nhật danh sách mới nhất
                             String newData = manager.getAllItems();
                             Request resUpdate = new Request("AUCTION_UPDATE", newData);
 
+                            // Phát loa cho toàn bộ Server (Real-time)
                             AuctionServer.broadcast(gson.toJson(resUpdate));
-
                         } else {
-                            sendMessage(gson.toJson(
-                                    new Request("ERROR", "Giá phải cao hơn giá hiện tại!")
-                            ));
+                            // Nếu đặt giá thất bại (giá thấp hơn giá hiện tại)
+                            sendMessage(gson.toJson(new Request("ERROR", "Mức giá không hợp lệ (Phải cao hơn giá hiện tại)!")));
                         }
-
                         break;
 
                     // =========================
-                    // ADD ITEM (🔥 NEW)
+                    // ADD ITEM
                     // =========================
                     case "ADD_ITEM":
-
                         JsonObject addObj = gson.fromJson(req.getPayload(), JsonObject.class);
-
                         String name = addObj.get("item").getAsString();
                         int startPrice = addObj.get("price").getAsInt();
 
                         manager.addItem(name, startPrice);
 
-                        String newData = manager.getAllItems();
-                        Request resAdd = new Request("AUCTION_UPDATE", newData);
+                        String newDataAfterAdd = manager.getAllItems();
+                        Request resAdd = new Request("AUCTION_UPDATE", newDataAfterAdd);
 
                         AuctionServer.broadcast(gson.toJson(resAdd));
-
                         break;
                 }
             }

@@ -2,6 +2,7 @@ package model;
 
 import model.item.Item;
 import model.user.User;
+import java.util.*;
 
 public class Auction extends Entity {
     private static final double MIN_BID_INCREMENT = 10_000;
@@ -11,9 +12,14 @@ public class Auction extends Entity {
     private double currentHighestBid;
     private boolean isActive;
 
+    // 🔥 thêm nhẹ
+    private final Object lock = new Object();
+    private List<Object> clients = new ArrayList<>(); // tạm để Object cho đỡ ảnh hưởng code cũ
+
     public Auction() {
         super();
     }
+
     private String validateBid(User bidder, double bidAmount) {
         if (bidder == null) return "Người dùng không hợp lệ";
         if (!isActive) return "Phiên đã kết thúc";
@@ -30,7 +36,6 @@ public class Auction extends Entity {
     public Auction(int id, Item item) {
         super(id);
 
-        // Validate
         if (item == null) {
             throw new IllegalArgumentException("Item không được null.");
         }
@@ -42,24 +47,44 @@ public class Auction extends Entity {
     }
 
     // =========================
-    // ĐẶT GIÁ
+    // ĐẶT GIÁ (đã fix thread-safe)
     // =========================
     public boolean placeBid(User bidder, double bidAmount) {
 
-        String error = validateBid(bidder, bidAmount);
-        if (error != null) {
-            System.out.println("Lỗi: " + error);
-            return false;
+        synchronized (lock) { // 🔥 thêm dòng này
+
+            String error = validateBid(bidder, bidAmount);
+            if (error != null) {
+                System.out.println("Lỗi: " + error);
+                return false;
+            }
+
+            currentHighestBid = bidAmount;
+            highestBidder = bidder;
+            item.setCurrentPrice(bidAmount);
+
+            System.out.printf("Thành công: [%s] bid %,.0f VNĐ\n",
+                    bidder.getUsername(), bidAmount);
+
+            // 🔥 thêm realtime nhẹ
+            broadcastUpdate();
+
+            return true;
         }
+    }
 
-        currentHighestBid = bidAmount;
-        highestBidder = bidder;
-        item.setCurrentPrice(bidAmount);
+    // =========================
+    // REALTIME (thêm rất nhẹ)
+    // =========================
+    public void addClient(Object client) {
+        clients.add(client);
+    }
 
-        System.out.printf("Thành công: [%s] bid %,.0f VNĐ\n",
-                bidder.getUsername(), bidAmount);
-
-        return true;
+    private void broadcastUpdate() {
+        for (Object c : clients) {
+            // để tránh lỗi code cũ, chỉ print demo
+            System.out.println("Update -> Giá mới: " + currentHighestBid);
+        }
     }
 
     // =========================
@@ -67,7 +92,6 @@ public class Auction extends Entity {
     // =========================
     public void closeAuction() {
 
-        // Chặn gọi nhiều lần
         if (!isActive) {
             System.out.println("Phiên đã đóng rồi.");
             return;
