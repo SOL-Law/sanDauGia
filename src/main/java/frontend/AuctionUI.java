@@ -17,18 +17,21 @@ public class AuctionUI extends JFrame {
 
     private JTextField bidField;
     private JButton bidButton;
+    private JButton refreshButton;
 
     private JTextArea historyArea;
     private JLabel timerLabel;
 
     private PrintWriter out;
     private Gson gson;
+    private String userRole;
 
-    public AuctionUI(PrintWriter out, Gson gson) {
+    public AuctionUI(PrintWriter out, Gson gson,String role) {
         this.out = out;
         this.gson = gson;
+        this.userRole = role;
+        setTitle("PHÒNG ĐẤU GIÁ REALTIME - Quyền: " + this.userRole); // Đổi title cho ngầu
 
-        setTitle("PHÒNG ĐẤU GIÁ REALTIME");
         setSize(1000, 650);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
@@ -62,11 +65,11 @@ public class AuctionUI extends JFrame {
         topPanel.setOpaque(false);
         topPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
-        JLabel title = new JLabel("🔥 PHÒNG ĐẤU GIÁ REALTIME");
+        JLabel title = new JLabel(" PHÒNG ĐẤU GIÁ REALTIME");
         title.setFont(new Font("Segoe UI", Font.BOLD, 22));
         title.setForeground(Color.WHITE);
 
-        timerLabel = new JLabel("⏰ --s");
+        timerLabel = new JLabel(" --s");
         timerLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         timerLabel.setForeground(Color.YELLOW);
 
@@ -96,7 +99,7 @@ public class AuctionUI extends JFrame {
         JScrollPane historyScroll = new JScrollPane(historyArea);
         historyScroll.setOpaque(false);
         historyScroll.getViewport().setOpaque(false);
-        historyScroll.setBorder(BorderFactory.createTitledBorder("📜 Lịch sử đấu giá"));
+        historyScroll.setBorder(BorderFactory.createTitledBorder(" Lịch sử đấu giá"));
 
         // ===== SPLIT =====
         JSplitPane splitPane = new JSplitPane(
@@ -109,8 +112,21 @@ public class AuctionUI extends JFrame {
         splitPane.setBorder(null);
 
         // ===== BOTTOM =====
+
         JPanel bottomPanel = new JPanel();
         bottomPanel.setOpaque(false);
+
+        JButton startButton = new JButton("Bắt đầu");
+
+        // 3. Nếu là Admin thì gắn nút vào cái đáy (nhớ dùng đúng tên bottomPanel)
+        if ("ADMIN".equals(this.userRole)) {
+            bottomPanel.add(startButton);
+        }
+
+        // 4. Bắt sự kiện bấm nút
+        startButton.addActionListener(e -> {
+            out.println(gson.toJson(new Request("START_SESSION", "")));
+        });
 
         JLabel label = new JLabel("Nhập giá:");
         label.setForeground(Color.WHITE);
@@ -118,6 +134,9 @@ public class AuctionUI extends JFrame {
         bidField = new JTextField(10);
 
         bidButton = new JButton("Đặt giá");
+        bidButton.setEnabled(false);
+
+        refreshButton = new JButton("Refresh");
         bidButton.setBackground(new Color(0, 150, 255));
         bidButton.setForeground(Color.WHITE);
 
@@ -191,6 +210,17 @@ public class AuctionUI extends JFrame {
             }
         });
     }
+    // ===== THÊM HÀM NÀY ĐỂ MỞ KHÓA GIAO DIỆN =====
+    public void startNewSession(String message) {
+        // Mở khóa nút bấm
+        bidButton.setEnabled(true);
+
+        // (Tùy chọn) Xóa trắng ô nhập tiền của ván cũ đi cho sạch
+        bidField.setText("");
+
+        // Hiện thông báo cho khí thế
+        // System.out.println(message); // Hoặc dùng JOptionPane tùy bạn
+    }
 
     // =========================
     // HISTORY
@@ -214,7 +244,7 @@ public class AuctionUI extends JFrame {
 
         SwingUtilities.invokeLater(() -> {
 
-            timerLabel.setText("⛔ KẾT THÚC");
+            timerLabel.setText(" KẾT THÚC");
             bidButton.setEnabled(false);
 
             JOptionPane.showMessageDialog(this, message);
@@ -227,9 +257,12 @@ public class AuctionUI extends JFrame {
     public void updateTimer(int time) {
         SwingUtilities.invokeLater(() -> {
             if (time > 0) {
-                timerLabel.setText("⏰ " + time + "s");
+                timerLabel.setText(" " + time + "s");
             } else {
-                timerLabel.setText("⛔ KẾT THÚC");
+                timerLabel.setText(" KẾT THÚC");
+            }
+            if (!bidButton.isEnabled()) {
+                bidButton.setEnabled(true);
             }
         });
     }

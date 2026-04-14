@@ -78,6 +78,21 @@ public class AuctionManager {
     public synchronized void endAuction() {
         isRunning = false;
     }
+    public synchronized void startNewSession() {
+        this.isRunning = true; // Gạt công tắc lên lại
+
+        System.out.println(" Quản lý đã khởi động lại phiên mới!");
+
+        // (Tùy chọn) Nếu bạn muốn mỗi lần đấu giá lại từ đầu,
+        // bạn có thể clear người thắng cũ ở đây.
+        // Ví dụ:
+        /*
+        for (BidInfo bid : items.values()) {
+            bid.setCurrentPrice(bid.getStartPrice()); // reset về giá gốc
+            bid.setLeader("none"); // xóa tên người thắng
+        }
+        */
+    }
 
     public synchronized boolean isRunning() {
         return isRunning;

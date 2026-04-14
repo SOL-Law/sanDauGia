@@ -71,7 +71,7 @@ public class MainUI {
                                 JOptionPane.showMessageDialog(frame, "Đăng nhập thành công! Role: " + role);
 
                                 // mở UI đấu giá
-                                auctionUI = new AuctionUI(out, gson);
+                                auctionUI = new AuctionUI(out, gson, role);
                                 auctionUI.setVisible(true);
 
                                 frame.dispose();
@@ -113,6 +113,15 @@ public class MainUI {
                                     auctionUI.auctionEnded(response.getPayload());
                                 }
 
+                                break;
+                            // =========================
+                            //  PHIÊN MỚI BẮT ĐẦU
+                            // =========================
+                            case "AUCTION_START":
+                                if (auctionUI != null) {
+                                    // Gọi cái hàm mở khóa vừa viết ở Bước 1
+                                    auctionUI.startNewSession(response.getPayload());
+                                }
                                 break;
 
                             // =========================
