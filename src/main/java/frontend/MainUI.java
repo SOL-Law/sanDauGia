@@ -61,7 +61,7 @@ public class MainUI {
                         switch (response.getAction()) {
 
                             // =========================
-                            // LOGIN SUCCESS (🔥 FIX ROLE)
+                            // LOGIN SUCCESS
                             // =========================
                             case "LOGIN_SUCCESS":
 
@@ -70,7 +70,7 @@ public class MainUI {
 
                                 JOptionPane.showMessageDialog(frame, "Đăng nhập thành công! Role: " + role);
 
-                                // mở UI
+                                // mở UI đấu giá
                                 auctionUI = new AuctionUI(out, gson);
                                 auctionUI.setVisible(true);
 
@@ -82,7 +82,7 @@ public class MainUI {
                                 break;
 
                             // =========================
-                            // UPDATE
+                            // UPDATE DATA
                             // =========================
                             case "AUCTION_UPDATE":
 
@@ -93,7 +93,19 @@ public class MainUI {
                                 break;
 
                             // =========================
-                            // AUCTION END (🔥 FIX)
+                            // 🔥 TIMER UPDATE (QUAN TRỌNG)
+                            // =========================
+                            case "TIMER_UPDATE":
+
+                                if (auctionUI != null) {
+                                    int time = Integer.parseInt(response.getPayload());
+                                    auctionUI.updateTimer(time);
+                                }
+
+                                break;
+
+                            // =========================
+                            // 🔥 AUCTION END
                             // =========================
                             case "AUCTION_END":
 

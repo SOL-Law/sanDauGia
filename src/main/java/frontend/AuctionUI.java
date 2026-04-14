@@ -7,6 +7,8 @@ import javax.swing.*;
 import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.io.PrintWriter;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 
 public class AuctionUI extends JFrame {
 
@@ -16,10 +18,8 @@ public class AuctionUI extends JFrame {
     private JTextField bidField;
     private JButton bidButton;
 
-    private JLabel statusLabel;
+    private JTextArea historyArea;
     private JLabel timerLabel;
-
-    private JTextArea logArea;
 
     private PrintWriter out;
     private Gson gson;
@@ -28,8 +28,8 @@ public class AuctionUI extends JFrame {
         this.out = out;
         this.gson = gson;
 
-        setTitle("🔥 PHÒNG ĐẤU GIÁ REALTIME");
-        setSize(900, 600);
+        setTitle("PHÒNG ĐẤU GIÁ REALTIME");
+        setSize(1000, 650);
         setLocationRelativeTo(null);
         setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
 
@@ -38,59 +38,77 @@ public class AuctionUI extends JFrame {
 
     private void initUI() {
 
-        // ===== BACKGROUND =====
-        ImageIcon bg = new ImageIcon("src/main/java/frontend/background2.jpg");
-        JLabel background = new JLabel(bg);
+        // ===== BACKGROUND PANEL (CUSTOM VẼ ẢNH) =====
+        JPanel background = new JPanel() {
+            Image bg = new ImageIcon("src/main/java/frontend/background2.jpg").getImage();
+
+            @Override
+            protected void paintComponent(Graphics g) {
+                super.paintComponent(g);
+
+                // vẽ ảnh full màn
+                g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
+
+                // 🔥 phủ lớp mờ (glass effect)
+                g.setColor(new Color(0, 0, 0, 120));
+                g.fillRect(0, 0, getWidth(), getHeight());
+            }
+        };
+
         background.setLayout(new BorderLayout());
 
-        // ===== TOP PANEL =====
-        JPanel topPanel = new JPanel(new GridLayout(1, 2));
+        // ===== TOP BAR =====
+        JPanel topPanel = new JPanel(new BorderLayout());
         topPanel.setOpaque(false);
+        topPanel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
 
-        statusLabel = new JLabel("Trạng thái: ĐANG ĐẤU", JLabel.LEFT);
-        statusLabel.setForeground(Color.GREEN);
-        statusLabel.setFont(new Font("Arial", Font.BOLD, 16));
+        JLabel title = new JLabel("🔥 PHÒNG ĐẤU GIÁ REALTIME");
+        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
+        title.setForeground(Color.WHITE);
 
-        timerLabel = new JLabel("⏱ Thời gian: --", JLabel.RIGHT);
+        timerLabel = new JLabel("⏰ --s");
+        timerLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
         timerLabel.setForeground(Color.YELLOW);
-        timerLabel.setFont(new Font("Arial", Font.BOLD, 16));
 
-        topPanel.add(statusLabel);
-        topPanel.add(timerLabel);
+        topPanel.add(title, BorderLayout.WEST);
+        topPanel.add(timerLabel, BorderLayout.EAST);
 
         // ===== TABLE =====
         String[] columns = {"Item", "Price", "Leader"};
         model = new DefaultTableModel(columns, 0);
 
         table = new JTable(model);
-        table.setRowHeight(30);
-        table.setFont(new Font("Arial", Font.PLAIN, 14));
+        table.setRowHeight(28);
+        table.setFont(new Font("Segoe UI", Font.PLAIN, 14));
 
-        JScrollPane scrollPane = new JScrollPane(table);
-        scrollPane.setOpaque(false);
-        scrollPane.getViewport().setOpaque(false);
+        JScrollPane tableScroll = new JScrollPane(table);
+        tableScroll.setOpaque(false);
+        tableScroll.getViewport().setOpaque(false);
+        tableScroll.setBorder(BorderFactory.createTitledBorder("Danh sách sản phẩm"));
 
-        // ===== LOG AREA =====
-        logArea = new JTextArea(8, 20);
-        logArea.setEditable(false);
-        logArea.setBackground(new Color(0, 0, 0, 150));
-        logArea.setForeground(Color.WHITE);
+        // ===== HISTORY =====
+        historyArea = new JTextArea();
+        historyArea.setEditable(false);
+        historyArea.setOpaque(false);
+        historyArea.setForeground(new Color(0, 255, 150));
+        historyArea.setFont(new Font("Consolas", Font.PLAIN, 13));
 
-        JScrollPane logScroll = new JScrollPane(logArea);
+        JScrollPane historyScroll = new JScrollPane(historyArea);
+        historyScroll.setOpaque(false);
+        historyScroll.getViewport().setOpaque(false);
+        historyScroll.setBorder(BorderFactory.createTitledBorder("📜 Lịch sử đấu giá"));
 
-        // ===== RIGHT PANEL =====
-        JPanel rightPanel = new JPanel(new BorderLayout());
-        rightPanel.setOpaque(false);
-        rightPanel.add(new JLabel("📜 Lịch sử đấu giá"), BorderLayout.NORTH);
-        rightPanel.add(logScroll, BorderLayout.CENTER);
+        // ===== SPLIT =====
+        JSplitPane splitPane = new JSplitPane(
+                JSplitPane.HORIZONTAL_SPLIT,
+                tableScroll,
+                historyScroll
+        );
+        splitPane.setDividerLocation(550);
+        splitPane.setOpaque(false);
+        splitPane.setBorder(null);
 
-        // ===== CENTER =====
-        JPanel centerPanel = new JPanel(new GridLayout(1, 2));
-        centerPanel.setOpaque(false);
-        centerPanel.add(scrollPane);
-        centerPanel.add(rightPanel);
-
-        // ===== BOTTOM PANEL =====
+        // ===== BOTTOM =====
         JPanel bottomPanel = new JPanel();
         bottomPanel.setOpaque(false);
 
@@ -100,16 +118,19 @@ public class AuctionUI extends JFrame {
         bidField = new JTextField(10);
 
         bidButton = new JButton("Đặt giá");
+        bidButton.setBackground(new Color(0, 150, 255));
+        bidButton.setForeground(Color.WHITE);
 
         bottomPanel.add(label);
         bottomPanel.add(bidField);
         bottomPanel.add(bidButton);
 
+        // ===== EVENT =====
         bidButton.addActionListener(e -> placeBid());
 
         // ===== ADD =====
         background.add(topPanel, BorderLayout.NORTH);
-        background.add(centerPanel, BorderLayout.CENTER);
+        background.add(splitPane, BorderLayout.CENTER);
         background.add(bottomPanel, BorderLayout.SOUTH);
 
         setContentPane(background);
@@ -119,6 +140,7 @@ public class AuctionUI extends JFrame {
     // PLACE BID
     // =========================
     private void placeBid() {
+
         int row = table.getSelectedRow();
 
         if (row == -1) {
@@ -145,7 +167,7 @@ public class AuctionUI extends JFrame {
     }
 
     // =========================
-    // UPDATE TABLE
+    // UPDATE DATA
     // =========================
     public void updateAuctionInfo(String data) {
 
@@ -165,30 +187,50 @@ public class AuctionUI extends JFrame {
                         parts[2]
                 });
 
-                // 🔥 log realtime
-                logArea.append("Update: " + parts[0] + " -> " + parts[1] + " (" + parts[2] + ")\n");
+                addHistory(parts[0], parts[1], parts[2]);
             }
         });
     }
 
     // =========================
-    // UPDATE TIMER
+    // HISTORY
     // =========================
-    public void updateTimer(String time) {
-        SwingUtilities.invokeLater(() -> {
-            timerLabel.setText("⏱ Thời gian: " + time);
-        });
+    private void addHistory(String item, String price, String user) {
+
+        String time = new SimpleDateFormat("HH:mm:ss").format(new Date());
+
+        historyArea.append(String.format(
+                "[%s] %s → %s VNĐ (%s)\n",
+                time, item, price, user
+        ));
+
+        historyArea.setCaretPosition(historyArea.getDocument().getLength());
     }
 
     // =========================
     // AUCTION END
     // =========================
     public void auctionEnded(String message) {
+
         SwingUtilities.invokeLater(() -> {
-            statusLabel.setText("ĐÃ KẾT THÚC");
-            statusLabel.setForeground(Color.RED);
+
+            timerLabel.setText("⛔ KẾT THÚC");
+            bidButton.setEnabled(false);
 
             JOptionPane.showMessageDialog(this, message);
+        });
+    }
+
+    // =========================
+    // TIMER
+    // =========================
+    public void updateTimer(int time) {
+        SwingUtilities.invokeLater(() -> {
+            if (time > 0) {
+                timerLabel.setText("⏰ " + time + "s");
+            } else {
+                timerLabel.setText("⛔ KẾT THÚC");
+            }
         });
     }
 }

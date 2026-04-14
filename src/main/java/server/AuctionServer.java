@@ -24,7 +24,7 @@ public class AuctionServer {
         try (ServerSocket serverSocket = new ServerSocket(port)) {
             System.out.println("SERVER ĐÃ MỞ. Đang chờ kết nối...");
 
-            // chạy timer
+            // chạy timer realtime
             startAuctionTimer(60);
 
             while (true) {
@@ -45,38 +45,57 @@ public class AuctionServer {
     }
 
     // =========================
-    // TIMER KẾT THÚC ĐẤU GIÁ
+    // TIMER REALTIME + KẾT THÚC
     // =========================
     public static void startAuctionTimer(int seconds) {
 
         ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
+        Gson gson = new Gson();
 
-        scheduler.schedule(() -> {
+        final int[] timeLeft = {seconds};
+
+        System.out.println("⏰ Bắt đầu countdown: " + seconds + " giây");
+
+        // 🔥 chạy mỗi giây
+        scheduler.scheduleAtFixedRate(() -> {
             try {
-                System.out.println("🔔 HẾT GIỜ! Đang chốt phiên đấu giá...");
 
-                // 🔥 khóa phiên đấu giá
-                AuctionManager manager = AuctionManager.getInstance();
-                manager.endAuction();
+                // ===== GỬI TIMER CHO CLIENT =====
+                String timerJson = gson.toJson(
+                        new Request("TIMER_UPDATE", String.valueOf(timeLeft[0]))
+                );
 
-                // 🔥 lấy dữ liệu cuối từ manager
-                String result = manager.getAllItems();
+                broadcast(timerJson);
 
-                String message = "HẾT GIỜ! KẾT QUẢ CUỐI:\n" + result;
+                // ===== HẾT GIỜ =====
+                if (timeLeft[0] <= 0) {
 
-                Gson gson = new Gson();
-                String alertJson = gson.toJson(new Request("AUCTION_END", message));
+                    System.out.println("🔔 HẾT GIỜ! Đang chốt phiên đấu giá...");
 
-                broadcast(alertJson);
+                    AuctionManager manager = AuctionManager.getInstance();
+                    manager.endAuction();
 
-                scheduler.shutdown();
-                System.out.println("🔒 Đã khóa sổ phiên đấu giá!");
+                    String result = manager.getAllItems();
+
+                    String message = "HẾT GIỜ! KẾT QUẢ CUỐI:\n" + result;
+
+                    String alertJson = gson.toJson(
+                            new Request("AUCTION_END", message)
+                    );
+
+                    broadcast(alertJson);
+
+                    scheduler.shutdown();
+                    System.out.println("🔒 Đã khóa sổ phiên đấu giá!");
+                }
+
+                timeLeft[0]--;
 
             } catch (Exception e) {
                 e.printStackTrace();
             }
 
-        }, seconds, TimeUnit.SECONDS); // ✅ sửa đúng biến
+        }, 0, 1, TimeUnit.SECONDS);
     }
 
     // =========================
