@@ -147,10 +147,6 @@ public class ClientHandler implements Runnable {
 
                         AuctionServer.broadcast(gson.toJson(resAdd));
 
-                        break;case "START_SESSION":
-                        // Chỉ kích hoạt nếu Admin hoặc giảng viên ấn
-                        System.out.println("Nhận lệnh mở phiên đấu giá mới từ Client!");
-                        AuctionServer.startAuctionTimer(60); // Gọi hàm đếm lùi chạy 60 giây
                         break;
                 }
             }
