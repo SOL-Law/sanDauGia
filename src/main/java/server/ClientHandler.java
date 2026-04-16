@@ -18,6 +18,8 @@ public class ClientHandler implements Runnable {
     private BufferedReader in;
     private PrintWriter out;
     private Gson gson;
+    private String loggedInUser;
+    private String userRole;
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
@@ -59,6 +61,8 @@ public class ClientHandler implements Runnable {
                         String role = UserDao.login(usernameLogin, passwordLogin);
 
                         if (role != null) {
+                            this.loggedInUser = usernameLogin;
+                            this.userRole = role;
 
                             JsonObject res = new JsonObject();
                             res.addProperty("role", role);
@@ -93,6 +97,25 @@ public class ClientHandler implements Runnable {
                         String data = manager.getAllItems();
                         sendMessage(gson.toJson(new Request("AUCTION_UPDATE", data)));
                         break;
+
+                    // =======================
+                    // BẮT ĐẦU PHIÊN ĐẤU GIÁ
+                    // =======================
+                    case "START_SESSION":
+                        // Nhớ lại bài học bảo mật: Chỉ Admin mới được phép gọi lệnh này!
+                        if ("ADMIN".equals(this.userRole)) {
+                            System.out.println("Sếp " + this.loggedInUser + " ra lệnh mở phòng!");
+
+                            // Gọi cái hàm có sẵn trong file AuctionServer của bạn
+                            AuctionServer.startAuctionTimer(60);
+
+                        } else {
+                            System.out.println("Kẻ gian " + this.loggedInUser + " định hack nút Bắt đầu!");
+                            sendMessage(gson.toJson(new Request("ERROR", "Bạn không có quyền Admin!")));
+                        }
+                        break;
+
+                    // ... case PLACE_BID ...
 
                     // =========================
                     // PLACE BID
