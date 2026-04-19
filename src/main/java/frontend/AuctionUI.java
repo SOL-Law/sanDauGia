@@ -217,9 +217,8 @@ public class AuctionUI extends JFrame {
 
         // (Tùy chọn) Xóa trắng ô nhập tiền của ván cũ đi cho sạch
         bidField.setText("");
-
+        JOptionPane.showMessageDialog(this, message);
         // Hiện thông báo cho khí thế
-        // System.out.println(message); // Hoặc dùng JOptionPane tùy bạn
     }
 
     // =========================
