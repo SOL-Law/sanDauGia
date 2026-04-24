@@ -1,21 +1,34 @@
 package model;
 
+import model.item.*;
+import model.user.User;
+import java.time.LocalDateTime;
 import java.util.*;
 
 public class AuctionManager {
-
     private static AuctionManager instance;
-
-    // 🔥 dùng Map với id
-    private Map<Integer, BidInfo> items = new HashMap<>();
-
+    private Map<Integer, Auction> auctions = new HashMap<>();
     private boolean isRunning = true;
 
     private AuctionManager() {
-        items.put(1, new BidInfo("Laptop", 100, "none"));
-        items.put(2, new BidInfo("Phone", 200, "none"));
-        items.put(3, new BidInfo("Watch", 300, "none"));
+        // Khởi tạo vài phiên mẫu với các loại Item cụ thể
+        auctions.put(1, new Auction(1,
+                new Electronics(1, "Laptop Gaming", 1000, "Laptop cấu hình cao", "Dell", 24),
+                LocalDateTime.now().plusSeconds(30)));
+
+        auctions.put(2, new Auction(2,
+                new Vehicle(2, "Xe máy", 500, "Xe tay ga", "Xe máy", "125cc"),
+                LocalDateTime.now().plusSeconds(45)));
+
+        auctions.put(3, new Auction(3,
+                new Art(3, "Tranh sơn dầu", 300, "Tác phẩm nghệ thuật", "Nguyễn Văn A", "Sơn dầu"),
+                LocalDateTime.now().plusSeconds(60)));
     }
+    // Trong AuctionManager.java
+    public synchronized Auction getAuctionById(int id) {
+        return auctions.get(id);
+    }
+
 
     public static synchronized AuctionManager getInstance() {
         if (instance == null) {
@@ -24,77 +37,44 @@ public class AuctionManager {
         return instance;
     }
 
-    // =========================
-    // PLACE BID (THREAD-SAFE)
-    // =========================
-    public synchronized boolean placeBid(String itemName, int price, String user) {
-
+    // Đặt giá cho phiên cụ thể
+    public synchronized boolean placeBid(int auctionId, User bidder, double price) {
         if (!isRunning) return false;
-
-        for (BidInfo bid : items.values()) {
-
-            if (bid.getItem().equals(itemName)) {
-
-                if (price > bid.getCurrentPrice()) {
-                    bid.setCurrentPrice(price);
-                    bid.setLeader(user);
-                    return true;
-                }
-            }
+        Auction auction = auctions.get(auctionId);
+        if (auction != null) {
+            return auction.placeBid(bidder, price);
         }
         return false;
     }
 
-    // =========================
-    // 🔥 ADD ITEM (SELLER)
-    // =========================
-    public synchronized void addItem(String name, int startPrice) {
-
-        int newId = items.size() + 1;
-
-        items.put(newId, new BidInfo(name, startPrice, "none"));
-
-        System.out.println("🆕 Thêm sản phẩm: " + name + " | Giá: " + startPrice);
+    // Thêm phiên mới với Item bất kỳ
+    public synchronized void addItem(Item item, LocalDateTime endTime) {
+        int newId = auctions.size() + 1;
+        auctions.put(newId, new Auction(newId, item, endTime));
+        System.out.println("Thêm sản phẩm: " + item.getName() + " | Giá khởi điểm: " + item.getStartPrice());
     }
 
-    // =========================
-    // GET DATA
-    // =========================
+    // Trả về chuỗi để dễ gửi qua socket
     public synchronized String getAllItems() {
         StringBuilder sb = new StringBuilder();
-
-        for (BidInfo b : items.values()) {
-            sb.append(b.getItem()).append("|")
-                    .append(b.getCurrentPrice()).append("|")
-                    .append(b.getLeader()).append(";");
+        for (Auction a : auctions.values()) {
+            BidInfo info = new BidInfo(
+                    a.getItem().getName(),
+                    (int) a.getCurrentHighestBid(),
+                    a.getHighestBidder() != null ? a.getHighestBidder().getUsername() : "none"
+            );
+            sb.append(info.toString()).append("\n");
         }
-
         return sb.toString();
     }
 
-    // =========================
-    // KẾT THÚC PHIÊN
-    // =========================
-    public synchronized void endAuction() {
-        isRunning = false;
-    }
+
+    public synchronized void endAuction() { isRunning = false; }
+
     public synchronized void startNewSession() {
-        this.isRunning = true; // Gạt công tắc lên lại
-
-        System.out.println(" Quản lý đã khởi động lại phiên mới!");
-
-        // (Tùy chọn) Nếu bạn muốn mỗi lần đấu giá lại từ đầu,
-        // bạn có thể clear người thắng cũ ở đây.
-        // Ví dụ:
-        /*
-        for (BidInfo bid : items.values()) {
-            bid.setCurrentPrice(bid.getStartPrice()); // reset về giá gốc
-            bid.setLeader("none"); // xóa tên người thắng
-        }
-        */
+        this.isRunning = true;
+        System.out.println("Quản lý đã khởi động lại phiên mới!");
     }
 
-    public synchronized boolean isRunning() {
-        return isRunning;
-    }
+    public synchronized boolean isRunning() { return isRunning; }
 }

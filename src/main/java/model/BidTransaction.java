@@ -18,12 +18,10 @@ public class BidTransaction extends Entity {
     public BidTransaction(int id, Auction auction, User bidder, double bidAmount) {
         super(id);
 
-        // Validate object
         if (auction == null || bidder == null) {
             throw new IllegalArgumentException("Auction và Bidder không được null.");
         }
 
-        // Validate giá
         if (bidAmount <= 0) {
             throw new IllegalArgumentException("Giá giao dịch phải lớn hơn 0.");
         }
@@ -80,13 +78,16 @@ public class BidTransaction extends Entity {
         return timestamp;
     }
 
+    // Hiển thị chi tiết giao dịch
     @Override
     public String toString() {
         DateTimeFormatter formatter = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm:ss");
 
         return "BidTransaction{" +
                 "id=" + getId() +
-                ", bidder=" + bidder.getUsername() +
+                ", auctionId=" + (auction != null ? auction.getId() : "null") +
+                ", item=" + (auction != null ? auction.getItem().getName() : "null") +
+                ", bidder=" + (bidder != null ? bidder.getUsername() : "null") +
                 ", bidAmount=" + String.format("%,.0f VNĐ", bidAmount) +
                 ", time=" + timestamp.format(formatter) +
                 '}';

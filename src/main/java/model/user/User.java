@@ -8,43 +8,47 @@ public class User extends Entity {
     private String password;
     private String email;
     private double balance;
+    private String role; // BIDDER, SELLER, ADMIN
 
-    // 🔥 ROLE
-    private String role;
-
+    // Constructor mặc định
     public User() {
         super();
         this.role = "BIDDER";
+        this.balance = 0.0;
     }
 
-    // 🔥 Constructor đầy đủ (có role)
+    // Constructor đầy đủ (có role)
     public User(int id, String username, String password, String email, String role) {
         super(id);
         this.setUsername(username);
         this.setPassword(password);
         this.setEmail(email);
-        this.balance = 0.0;
         this.setRole(role);
+        this.balance = 0.0;
     }
 
-    // 🔥 FIX: thêm constructor 4 tham số (QUAN TRỌNG)
+    // Constructor không có role (mặc định BIDDER)
     public User(int id, String username, String password, String email) {
         super(id);
         this.setUsername(username);
         this.setPassword(password);
         this.setEmail(email);
+        this.role = "BIDDER";
         this.balance = 0.0;
-        this.role = "BIDDER"; // mặc định
     }
 
-    // =========================
-    // GETTER / SETTER
-    // =========================
-
-    public String getUsername() {
-        return username;
+    // Constructor tiện dụng: id, username, balance (dùng cho test nhanh)
+    public User(int id, String username, double balance) {
+        super(id);
+        this.setUsername(username);
+        this.password = "default123"; // gán mặc định
+        this.email = username.toLowerCase() + "@example.com";
+        this.role = "BIDDER";
+        this.balance = balance;
     }
 
+    // Getter / Setter
+    public String getUsername() { return username; }
     public void setUsername(String username) {
         if (username == null || username.trim().isEmpty()) {
             throw new IllegalArgumentException("Username không hợp lệ.");
@@ -52,10 +56,7 @@ public class User extends Entity {
         this.username = username.trim();
     }
 
-    public String getPassword() {
-        return password;
-    }
-
+    public String getPassword() { return password; }
     public void setPassword(String password) {
         if (password == null || password.length() < 6) {
             throw new IllegalArgumentException("Password phải >= 6 ký tự.");
@@ -63,10 +64,7 @@ public class User extends Entity {
         this.password = password;
     }
 
-    public String getEmail() {
-        return email;
-    }
-
+    public String getEmail() { return email; }
     public void setEmail(String email) {
         if (email == null || !email.contains("@")) {
             throw new IllegalArgumentException("Email không hợp lệ.");
@@ -74,67 +72,36 @@ public class User extends Entity {
         this.email = email.trim();
     }
 
-    public double getBalance() {
-        return balance;
-    }
+    public double getBalance() { return balance; }
 
-    // =========================
-    // ROLE
-    // =========================
-    public String getRole() {
-        return role;
-    }
-
+    public String getRole() { return role; }
     public void setRole(String role) {
         if (role == null) {
             this.role = "BIDDER";
             return;
         }
-
         role = role.toUpperCase();
-
         if (!role.equals("BIDDER") && !role.equals("SELLER") && !role.equals("ADMIN")) {
             throw new IllegalArgumentException("Role không hợp lệ.");
         }
-
         this.role = role;
     }
 
-    // =========================
-    // NẠP TIỀN
-    // =========================
+    // Nạp tiền
     public void addBalance(double amount) {
-        if (amount <= 0) {
-            throw new IllegalArgumentException("Số tiền phải > 0.");
-        }
-
+        if (amount <= 0) throw new IllegalArgumentException("Số tiền phải > 0.");
         balance += amount;
-
-        System.out.printf("Nạp thành công. [%s]: %,.0f VNĐ\n",
-                username, balance);
+        System.out.printf("Nạp thành công. [%s]: %,.0f VNĐ\n", username, balance);
     }
 
-    // =========================
-    // TRỪ TIỀN
-    // =========================
+    // Trừ tiền
     public void deductBalance(double amount) {
-        if (amount <= 0) {
-            throw new IllegalArgumentException("Số tiền không hợp lệ.");
-        }
-
-        if (balance < amount) {
-            throw new IllegalStateException("Không đủ tiền.");
-        }
-
+        if (amount <= 0) throw new IllegalArgumentException("Số tiền không hợp lệ.");
+        if (balance < amount) throw new IllegalStateException("Không đủ tiền.");
         balance -= amount;
-
-        System.out.printf("Trừ tiền thành công [%s]: -%,.0f VNĐ\n",
-                username, amount);
+        System.out.printf("Trừ tiền thành công [%s]: -%,.0f VNĐ\n", username, amount);
     }
 
-    // =========================
-    // DEBUG
-    // =========================
     @Override
     public String toString() {
         return "User{" +

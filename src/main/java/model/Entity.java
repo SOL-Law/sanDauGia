@@ -4,6 +4,7 @@ import java.util.Objects;
 
 public abstract class Entity {
 
+
     // ID định danh duy nhất của object
     protected int id;
 
@@ -13,7 +14,8 @@ public abstract class Entity {
 
     // Constructor có tham số
     public Entity(int id) {
-        setId(id); // Gọi setter để kiểm tra dữ liệu
+        setId(id); // Gọi setter để k
+        // iểm tra dữ liệu
     }
 
     public int getId() {

@@ -21,6 +21,8 @@ public class Vehicle extends Item {
         this.setEngine(engine);
     }
 
+
+
     public String getVehicleType() {
         return vehicleType;
     }

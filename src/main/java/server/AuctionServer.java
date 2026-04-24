@@ -28,7 +28,7 @@ public class AuctionServer {
 
             // ❌ XÓA HOẶC COMMENT DÒNG NÀY LẠI: Không cho tự động chạy nữa
             // startAuctionTimer(60);
-            System.out.println("⏳ Server đang chờ lệnh bắt đầu phiên đấu giá...");
+            System.out.println(" Server đang chờ lệnh bắt đầu phiên đấu giá...");
 
             while (true) {
                 Socket clientSocket = serverSocket.accept();
