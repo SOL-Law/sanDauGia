@@ -1,33 +1,36 @@
 package server;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonObject;
 import network.Request;
 import server.dao.UserDao;
-import model.user.User;
 import model.AuctionManager;
 
-import java.io.BufferedReader;
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.Socket;
+import java.util.HashMap;
+import java.util.Map;
 
 public class ClientHandler implements Runnable {
 
-    private final Socket socket;
+    private Socket socket;
     private BufferedReader in;
     private PrintWriter out;
-    private Gson gson;
-    private String loggedInUser;
-    private String userRole;
+    private Gson gson = new Gson();
 
     public ClientHandler(Socket socket) {
         this.socket = socket;
-        this.gson = new Gson();
 
         try {
-            this.in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
-            this.out = new PrintWriter(socket.getOutputStream(), true);
+            in = new BufferedReader(
+                    new InputStreamReader(socket.getInputStream())
+            );
+
+            out = new PrintWriter(
+                    socket.getOutputStream(),
+                    true
+            );
+            AuctionServer.sendAuctionDataTo(this);
+
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -37,158 +40,322 @@ public class ClientHandler implements Runnable {
     public void run() {
 
         try {
-            String jsonReceived;
 
-            AuctionManager manager = AuctionManager.getInstance();
+            String line;
 
-            while ((jsonReceived = in.readLine()) != null) {
+            while ((line = in.readLine()) != null) {
 
-                Request req = gson.fromJson(jsonReceived, Request.class);
-                System.out.println("[Client " + socket.getPort() + "] -> " + req.getAction());
+                System.out.println("Client gửi: " + line);
 
-                switch (req.getAction()) {
+                Request req =
+                        gson.fromJson(
+                                line,
+                                Request.class
+                        );
 
-                    // =========================
-                    // LOGIN (🔥 FIX ROLE)
-                    // =========================
+                String type =
+                        req.getType();
+
+                String payload =
+                        req.getPayload();
+
+                switch (type) {
+
                     case "LOGIN":
-
-                        JsonObject loginObj = gson.fromJson(req.getPayload(), JsonObject.class);
-
-                        String usernameLogin = loginObj.get("username").getAsString();
-                        String passwordLogin = loginObj.get("password").getAsString();
-
-                        String role = UserDao.login(usernameLogin, passwordLogin);
-
-                        if (role != null) {
-                            this.loggedInUser = usernameLogin;
-                            this.userRole = role;
-
-                            JsonObject res = new JsonObject();
-                            res.addProperty("role", role);
-
-                            sendMessage(gson.toJson(
-                                    new Request("LOGIN_SUCCESS", res.toString())
-                            ));
-
-                        } else {
-                            sendMessage(gson.toJson(new Request("ERROR", "Sai tài khoản!")));
-                        }
-
+                        handleLogin(payload);
                         break;
 
-                    // =========================
-                    // REGISTER
-                    // =========================
                     case "REGISTER":
-                        User userReg = gson.fromJson(req.getPayload(), User.class);
-
-                        if (UserDao.register(userReg.getUsername(), userReg.getPassword())) {
-                            sendMessage(gson.toJson(new Request("REGISTER_SUCCESS", "")));
-                        } else {
-                            sendMessage(gson.toJson(new Request("ERROR", "User đã tồn tại!")));
-                        }
+                        handleRegister(payload);
                         break;
 
-                    // =========================
-                    // LOAD DATA
-                    // =========================
-                    case "GET_AUCTION":
-                        String data = manager.getAllItems();
-                        sendMessage(gson.toJson(new Request("AUCTION_UPDATE", data)));
-                        break;
-
-                    // =======================
-                    // BẮT ĐẦU PHIÊN ĐẤU GIÁ
-                    // =======================
                     case "START_SESSION":
-                        // Nhớ lại bài học bảo mật: Chỉ Admin mới được phép gọi lệnh này!
-                        if ("ADMIN".equals(this.userRole)) {
-                            System.out.println("Sếp " + this.loggedInUser + " ra lệnh mở phòng!");
 
-                            // Gọi cái hàm có sẵn trong file AuctionServer của bạn
-                            AuctionServer.startAuctionTimer(60);
+                        AuctionServer
+                                .startAuctionTimer(60);
 
-                        } else {
-                            System.out.println("Kẻ gian " + this.loggedInUser + " định hack nút Bắt đầu!");
-                            sendMessage(gson.toJson(new Request("ERROR", "Bạn không có quyền Admin!")));
-                        }
                         break;
 
-                    // ... case PLACE_BID ...
-
-                    // =========================
-                    // PLACE BID
-                    // =========================
                     case "PLACE_BID":
-
-                        if (!manager.isRunning()) {
-                            sendMessage(gson.toJson(
-                                    new Request("ERROR", "Phiên đấu giá đã kết thúc!")
-                            ));
-                            break;
-                        }
-
-                        JsonObject obj = gson.fromJson(req.getPayload(), JsonObject.class);
-
-                        String item = obj.get("item").getAsString();
-                        int price = obj.get("price").getAsInt();
-
-                        String username = "user" + socket.getPort();
-
-                        boolean success = manager.placeBid(item, price, username);
-
-                        if (success) {
-
-                            String newData = manager.getAllItems();
-                            Request resUpdate = new Request("AUCTION_UPDATE", newData);
-
-                            AuctionServer.broadcast(gson.toJson(resUpdate));
-
-                        } else {
-                            sendMessage(gson.toJson(
-                                    new Request("ERROR", "Giá phải cao hơn giá hiện tại!")
-                            ));
-                        }
-
+                        handleBid(payload);
                         break;
 
-                    // =========================
-                    // ADD ITEM (🔥 NEW)
-                    // =========================
-                    case "ADD_ITEM":
-
-                        JsonObject addObj = gson.fromJson(req.getPayload(), JsonObject.class);
-
-                        String name = addObj.get("item").getAsString();
-                        int startPrice = addObj.get("price").getAsInt();
-
-                        manager.addItem(name, startPrice);
-
-                        String newData = manager.getAllItems();
-                        Request resAdd = new Request("AUCTION_UPDATE", newData);
-
-                        AuctionServer.broadcast(gson.toJson(resAdd));
-
+                    case "UPLOAD_ITEM":
+                        handleUpload(payload);
                         break;
                 }
             }
 
         } catch (Exception e) {
-            System.out.println("Client " + socket.getPort() + " disconnect!");
-        } finally {
-            try {
-                AuctionServer.activeClients.remove(this);
-                socket.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
+
+            System.out.println("Client disconnected");
+
         }
     }
 
-    public void sendMessage(String jsonMessage) {
-        if (out != null) {
-            out.println(jsonMessage);
+    // =========================
+    // LOGIN (FIX CHÍNH Ở ĐÂY)
+    // =========================
+    private void handleLogin(String payload) {
+
+        try {
+
+            var obj =
+                    gson.fromJson(
+                            payload,
+                            Map.class
+                    );
+
+            String username =
+                    (String) obj.get("username");
+
+            String password =
+                    (String) obj.get("password");
+
+            String role =
+                    UserDao.login(
+                            username,
+                            password
+                    );
+
+            if (role != null) {
+
+                Map<String, String> res =
+                        new HashMap<>();
+
+                res.put("role", role);
+
+                String jsonPayload =
+                        gson.toJson(res);
+
+                sendResponse(
+                        "LOGIN_SUCCESS",
+                        jsonPayload
+                );
+
+                // 🔥 FIX QUAN TRỌNG NHẤT
+                sendAuctionData();
+
+                // 🔥 gửi timer luôn
+                sendTimer();
+
+            }
+
+            else {
+
+                sendResponse(
+                        "LOGIN_FAIL",
+                        "Sai tài khoản hoặc mật khẩu"
+                );
+            }
+
         }
+
+        catch (Exception e) {
+
+            e.printStackTrace();
+
+            sendResponse(
+                    "ERROR",
+                    "Lỗi server"
+            );
+        }
+    }
+
+    // =========================
+    // REGISTER
+    // =========================
+    private void handleRegister(String payload) {
+
+        try {
+
+            var obj =
+                    gson.fromJson(
+                            payload,
+                            Map.class
+                    );
+
+            String username =
+                    (String) obj.get("username");
+
+            String password =
+                    (String) obj.get("password");
+
+            boolean ok =
+                    UserDao.register(
+                            username,
+                            password
+                    );
+
+            if (ok) {
+
+                sendResponse(
+                        "REGISTER_SUCCESS",
+                        "OK"
+                );
+            }
+
+            else {
+
+                sendResponse(
+                        "REGISTER_FAIL",
+                        "Tài khoản đã tồn tại"
+                );
+            }
+
+        }
+
+        catch (Exception e) {
+
+            e.printStackTrace();
+
+            sendResponse(
+                    "ERROR",
+                    "Lỗi đăng ký"
+            );
+        }
+    }
+
+    // =========================
+    // BID
+    // =========================
+    private void handleBid(String payload) {
+
+        var obj =
+                gson.fromJson(
+                        payload,
+                        Map.class
+                );
+
+        String item =
+                (String) obj.get("item");
+
+        double price =
+                (double) obj.get("price");
+
+        AuctionManager manager =
+                AuctionManager.getInstance();
+
+        manager.placeBid(
+                item,
+                (int) price,
+                "User"
+        );
+
+        String data =
+                manager.getAllItems();
+
+        AuctionServer.broadcast(
+
+                gson.toJson(
+
+                        new Request(
+                                "UPDATE_AUCTION",
+                                data
+                        )
+                )
+        );
+    }
+
+    // =========================
+    // UPLOAD ITEM
+    // =========================
+    private void handleUpload(String payload) {
+
+        var obj =
+                gson.fromJson(
+                        payload,
+                        Map.class
+                );
+
+        String name =
+                (String) obj.get("name");
+
+        double price =
+                (double) obj.get("price");
+
+        AuctionManager manager =
+                AuctionManager.getInstance();
+
+        manager.addItem(
+                name,
+                (int) price
+        );
+
+        String data =
+                manager.getAllItems();
+
+        AuctionServer.broadcast(
+
+                gson.toJson(
+
+                        new Request(
+                                "UPDATE_AUCTION",
+                                data
+                        )
+                )
+        );
+    }
+
+    // =========================
+    // GỬI ITEM KHI LOGIN XONG
+    // =========================
+    private void sendAuctionData() {
+
+        String data =
+                AuctionManager
+                        .getInstance()
+                        .getAllItems();
+
+        sendResponse(
+                "UPDATE_AUCTION",
+                data
+        );
+    }
+
+    // =========================
+    // GỬI TIMER KHI LOGIN XONG
+    // =========================
+    private void sendTimer() {
+
+        int time =
+                AuctionServer
+                        .getRemainingTime();
+
+        sendResponse(
+                "UPDATE_TIMER",
+                String.valueOf(time)
+        );
+    }
+
+    // =========================
+    // HELPER SEND JSON
+    // =========================
+    private void sendResponse(
+            String type,
+            String payload
+    ) {
+
+        Request res =
+                new Request(
+                        type,
+                        payload
+                );
+
+        String json =
+                gson.toJson(res);
+
+        out.println(json);
+
+        System.out.println(
+                "Server trả: "
+                        + json
+        );
+    }
+
+    public void sendMessage(String msg) {
+
+        out.println(msg);
+
     }
 }

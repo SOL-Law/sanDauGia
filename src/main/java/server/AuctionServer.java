@@ -17,97 +17,228 @@ public class AuctionServer {
 
     public static List<ClientHandler> activeClients = new ArrayList<>();
 
-    // 🔥 THÊM: Biến cờ kiểm soát trạng thái phòng đấu giá
     public static boolean isAuctionRunning = false;
 
+    private static int remainingTime = 0;
+
+    private static ScheduledExecutorService scheduler;
+
+    private static Gson gson = new Gson();
+
     public static void main(String[] args) {
+
         int port = 8888;
 
         try (ServerSocket serverSocket = new ServerSocket(port)) {
-            System.out.println("SERVER ĐÃ MỞ. Đang chờ kết nối...");
 
-            // ❌ XÓA HOẶC COMMENT DÒNG NÀY LẠI: Không cho tự động chạy nữa
-            // startAuctionTimer(60);
+            System.out.println("SERVER ĐÃ MỞ. Đang chờ kết nối...");
             System.out.println("⏳ Server đang chờ lệnh bắt đầu phiên đấu giá...");
 
             while (true) {
-                Socket clientSocket = serverSocket.accept();
-                System.out.println("=> Client: " + clientSocket.getPort());
 
-                ClientHandler clientThread = new ClientHandler(clientSocket);
+                Socket clientSocket =
+                        serverSocket.accept();
+
+                System.out.println(
+                        "=> Client: "
+                                + clientSocket.getPort()
+                );
+
+                ClientHandler clientThread =
+                        new ClientHandler(clientSocket);
+
                 activeClients.add(clientThread);
-                System.out.println("   Online: " + activeClients.size());
+
+                System.out.println(
+                        "   Online: "
+                                + activeClients.size()
+                );
 
                 new Thread(clientThread).start();
+
+                // 🔥 FIX QUAN TRỌNG:
+                // gửi danh sách item ngay khi client connect
+
+
+                // 🔥 FIX QUAN TRỌNG:
+                // sync timer nếu session đang chạy
+                if (isAuctionRunning) {
+
+                    clientThread.sendMessage(
+
+                            gson.toJson(
+
+                                    new Request(
+                                            "TIMER",
+                                            String.valueOf(remainingTime)
+                                    )
+                            )
+                    );
+                }
             }
 
-        } catch (Exception e) {
+        }
+
+        catch (Exception e) {
+
             e.printStackTrace();
+
         }
     }
 
     // =========================
-    // TIMER REALTIME + KẾT THÚC
+    // START TIMER SESSION
     // =========================
     public static void startAuctionTimer(int seconds) {
-        // 🔥 KIỂM TRA: Nếu đang chạy rồi thì không cho chạy đè lên nhau
+
         if (isAuctionRunning) {
-            System.out.println("⚠️ Một phiên đấu giá đang diễn ra, từ chối lệnh bắt đầu mới!");
+
+            System.out.println(
+                    "⚠️ Phiên đang chạy rồi!"
+            );
+
             return;
         }
 
-        isAuctionRunning = true; // Khóa cửa phòng, đánh dấu đang diễn ra
-        AuctionManager.getInstance().startNewSession();
+        isAuctionRunning = true;
 
-        // (TÙY CHỌN) Ở đây bạn có thể gọi Database để load thông tin món hàng tiếp theo ra
-        // AuctionManager.getInstance().loadNextItemFromDB();
+        AuctionManager
+                .getInstance()
+                .startNewSession();
 
-        ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
-        Gson gson = new Gson();
-        final int[] timeLeft = {seconds};
+        remainingTime = seconds;
 
-        System.out.println("🟢 BẮT ĐẦU PHIÊN MỚI! Countdown: " + seconds + " giây");
+        System.out.println(
+                "🟢 BẮT ĐẦU PHIÊN: "
+                        + seconds
+                        + " giây"
+        );
 
-        // Gửi thông báo cho toàn bộ Client biết phòng đã mở
-        broadcast(gson.toJson(new Request("AUCTION_START", "Phiên đấu giá bắt đầu!")));
+        broadcast(
+
+                gson.toJson(
+
+                        new Request(
+                                "START_SESSION",
+                                "Phiên đấu giá bắt đầu!"
+                        )
+                )
+        );
+
+        scheduler =
+                Executors.newScheduledThreadPool(1);
 
         scheduler.scheduleAtFixedRate(() -> {
+
             try {
-                // Gửi Timer
-                String timerJson = gson.toJson(new Request("TIMER_UPDATE", String.valueOf(timeLeft[0])));
-                broadcast(timerJson);
 
-                // HẾT GIỜ
-                if (timeLeft[0] <= 0) {
-                    System.out.println("🔴 HẾT GIỜ! Đang chốt phiên đấu giá...");
+                broadcast(
 
-                    AuctionManager manager = AuctionManager.getInstance();
+                        gson.toJson(
+
+                                new Request(
+                                        "TIMER",
+                                        String.valueOf(remainingTime)
+                                )
+                        )
+                );
+
+                if (remainingTime <= 0) {
+
+                    System.out.println("🔴 HẾT GIỜ");
+
+                    AuctionManager manager =
+                            AuctionManager.getInstance();
+
                     manager.endAuction();
 
-                    String result = manager.getAllItems();
-                    String message = "HẾT GIỜ! KẾT QUẢ CUỐI:\n" + result;
+                    String result =
+                            manager.getAllItems();
 
-                    broadcast(gson.toJson(new Request("AUCTION_END", message)));
+                    broadcast(
 
-                    scheduler.shutdown(); // Tắt đồng hồ này đi
+                            gson.toJson(
 
-                    // 🔥 QUAN TRỌNG NHẤT: Mở khóa biến cờ để sẵn sàng cho phiên tiếp theo
+                                    new Request(
+                                            "END_SESSION",
+                                            result
+                                    )
+                            )
+                    );
+
+                    scheduler.shutdown();
+
                     isAuctionRunning = false;
-                    System.out.println("✅ Đã khóa sổ! Sẵn sàng cho phiên mới.");
+
+                    System.out.println(
+                            "✅ Sẵn sàng phiên mới"
+                    );
                 }
 
-                timeLeft[0]--;
+                remainingTime--;
 
-            } catch (Exception e) {
+            }
+
+            catch (Exception e) {
+
                 e.printStackTrace();
+
             }
 
         }, 0, 1, TimeUnit.SECONDS);
     }
 
-    public static void broadcast(String jsonMessage) {
-        for (ClientHandler client : activeClients) {
-            client.sendMessage(jsonMessage);
+    // =========================
+    // CLIENT LOGIN SYNC TIMER
+    // =========================
+    public static int getRemainingTime() {
+
+        return remainingTime;
+
+    }
+
+    // =========================
+    // SEND ITEMS TO 1 CLIENT
+    // =========================
+    public static void sendAuctionDataTo(ClientHandler client) {
+
+        try {
+
+            String data =
+                    AuctionManager
+                            .getInstance()
+                            .getAllItems();
+
+            client.sendMessage(
+
+                    gson.toJson(
+
+                            new Request(
+                                    "UPDATE_AUCTION",
+                                    data
+                            )
+                    )
+            );
+
         }
+
+        catch (Exception e) {
+
+            e.printStackTrace();
+
+        }
+    }
+
+    // =========================
+    // BROADCAST ALL CLIENTS
+    // =========================
+    public static void broadcast(String jsonMessage) {
+
+        for (ClientHandler client : activeClients) {
+
+            client.sendMessage(jsonMessage);
+
+        }
+
     }
 }

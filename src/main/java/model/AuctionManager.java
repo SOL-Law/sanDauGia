@@ -1,100 +1,229 @@
 package model;
 
 import java.util.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public class AuctionManager {
 
     private static AuctionManager instance;
 
-    // 🔥 dùng Map với id
-    private Map<Integer, BidInfo> items = new HashMap<>();
+    // thread-safe storage
+    private final Map<Integer, BidInfo> items =
+            new ConcurrentHashMap<>();
 
-    private boolean isRunning = true;
+    // auto-increment ID
+    private final AtomicInteger idCounter =
+            new AtomicInteger(0);
+
+    // 🔥 FIX QUAN TRỌNG: mặc định phải false
+    private boolean isRunning = false;
 
     private AuctionManager() {
-        items.put(1, new BidInfo("Laptop", 100, "none"));
-        items.put(2, new BidInfo("Phone", 200, "none"));
-        items.put(3, new BidInfo("Watch", 300, "none"));
+
+        // dữ liệu mẫu ban đầu
+        addItem("Laptop", 100);
+        addItem("Phone", 200);
+        addItem("Watch", 300);
+
+        System.out.println("✅ AuctionManager initialized");
+        printAllItems();
     }
 
+    // =========================
+    // SINGLETON
+    // =========================
     public static synchronized AuctionManager getInstance() {
+
         if (instance == null) {
-            instance = new AuctionManager();
+
+            instance =
+                    new AuctionManager();
+
         }
+
         return instance;
     }
 
     // =========================
-    // PLACE BID (THREAD-SAFE)
+    // PLACE BID
     // =========================
-    public synchronized boolean placeBid(String itemName, int price, String user) {
+    public synchronized boolean placeBid(
+            String itemName,
+            int price,
+            String user
+    ) {
 
-        if (!isRunning) return false;
+        if (!isRunning) {
+
+            System.out.println("❌ BID FAIL (session chưa start)");
+
+            return false;
+        }
 
         for (BidInfo bid : items.values()) {
 
             if (bid.getItem().equals(itemName)) {
 
                 if (price > bid.getCurrentPrice()) {
+
                     bid.setCurrentPrice(price);
+
                     bid.setLeader(user);
+
+                    System.out.println(
+                            "💰 BID SUCCESS: "
+                                    + itemName
+                                    + " -> "
+                                    + price
+                                    + " ("
+                                    + user
+                                    + ")"
+                    );
+
                     return true;
                 }
+
+                System.out.println(
+                        "❌ BID FAIL (price too low)"
+                );
+
+                return false;
             }
         }
+
+        System.out.println(
+                "❌ BID FAIL (item not found)"
+        );
+
         return false;
     }
 
     // =========================
-    // 🔥 ADD ITEM (SELLER)
+    // ADD ITEM (UPLOAD)
     // =========================
-    public synchronized void addItem(String name, int startPrice) {
+    public synchronized void addItem(
+            String name,
+            int startPrice
+    ) {
 
-        int newId = items.size() + 1;
+        int newId =
+                idCounter.incrementAndGet();
 
-        items.put(newId, new BidInfo(name, startPrice, "none"));
+        items.put(
 
-        System.out.println("🆕 Thêm sản phẩm: " + name + " | Giá: " + startPrice);
+                newId,
+
+                new BidInfo(
+                        name,
+                        startPrice,
+                        "none"
+                )
+        );
+
+        System.out.println(
+                "🆕 ADD ITEM: "
+                        + name
+                        + " | "
+                        + startPrice
+        );
     }
 
     // =========================
-    // GET DATA
+    // GET ALL ITEMS (CLIENT UI)
     // =========================
     public synchronized String getAllItems() {
-        StringBuilder sb = new StringBuilder();
+
+        StringBuilder sb =
+                new StringBuilder();
 
         for (BidInfo b : items.values()) {
-            sb.append(b.getItem()).append("|")
-                    .append(b.getCurrentPrice()).append("|")
-                    .append(b.getLeader()).append(";");
+
+            sb.append(
+                            b.getItem()
+                    )
+                    .append("|")
+
+                    .append(
+                            b.getCurrentPrice()
+                    )
+
+                    .append("|")
+
+                    .append(
+                            b.getLeader()
+                    )
+
+                    .append(";");
         }
 
         return sb.toString();
     }
 
     // =========================
-    // KẾT THÚC PHIÊN
+    // START NEW SESSION
+    // =========================
+    public synchronized void startNewSession() {
+
+        isRunning = true;
+
+        System.out.println(
+                "🟢 START NEW SESSION"
+        );
+
+        for (BidInfo bid : items.values()) {
+
+            bid.setLeader("none");
+
+            // nếu muốn reset giá:
+            // bid.setCurrentPrice(bid.getStartPrice());
+        }
+    }
+
+    // =========================
+    // END SESSION
     // =========================
     public synchronized void endAuction() {
+
         isRunning = false;
-    }
-    public synchronized void startNewSession() {
-        this.isRunning = true; // Gạt công tắc lên lại
 
-        System.out.println(" Quản lý đã khởi động lại phiên mới!");
-
-        // (Tùy chọn) Nếu bạn muốn mỗi lần đấu giá lại từ đầu,
-        // bạn có thể clear người thắng cũ ở đây.
-        // Ví dụ:
-        /*
-        for (BidInfo bid : items.values()) {
-            bid.setCurrentPrice(bid.getStartPrice()); // reset về giá gốc
-            bid.setLeader("none"); // xóa tên người thắng
-        }
-        */
+        System.out.println(
+                "🔴 AUCTION ENDED"
+        );
     }
 
+    // =========================
+    // CHECK STATUS
+    // =========================
     public synchronized boolean isRunning() {
+
         return isRunning;
+
+    }
+
+    // =========================
+    // DEBUG PRINT
+    // =========================
+    public synchronized void printAllItems() {
+
+        System.out.println(
+                "===== ITEM LIST ====="
+        );
+
+        for (BidInfo bid : items.values()) {
+
+            System.out.println(
+
+                    bid.getItem()
+
+                            + " | "
+
+                            + bid.getCurrentPrice()
+
+                            + " | "
+
+                            + bid.getLeader()
+            );
+        }
     }
 }
