@@ -22,9 +22,9 @@ public class AuctionManager {
     private AuctionManager() {
 
         // dữ liệu mẫu ban đầu
-        addItem("Laptop", 100);
-        addItem("Phone", 200);
-        addItem("Watch", 300);
+        addItem("Laptop", 100,"");
+        addItem("Phone", 200,"");
+        addItem("Watch", 300,"");
 
         System.out.println("✅ AuctionManager initialized");
         printAllItems();
@@ -104,7 +104,8 @@ public class AuctionManager {
     // =========================
     public synchronized void addItem(
             String name,
-            int startPrice
+            int startPrice,
+            String base64Image
     ) {
 
         int newId =
@@ -117,7 +118,8 @@ public class AuctionManager {
                 new BidInfo(
                         name,
                         startPrice,
-                        "none"
+                        "none",
+                        base64Image
                 )
         );
 
@@ -133,30 +135,13 @@ public class AuctionManager {
     // GET ALL ITEMS (CLIENT UI)
     // =========================
     public synchronized String getAllItems() {
-
-        StringBuilder sb =
-                new StringBuilder();
-
+        StringBuilder sb = new StringBuilder();
         for (BidInfo b : items.values()) {
-
-            sb.append(
-                            b.getItem()
-                    )
-                    .append("|")
-
-                    .append(
-                            b.getCurrentPrice()
-                    )
-
-                    .append("|")
-
-                    .append(
-                            b.getLeader()
-                    )
-
-                    .append(";");
+            sb.append(b.getItem()).append("|")
+                    .append(b.getCurrentPrice()).append("|")
+                    .append(b.getLeader()).append("|") // Thêm gạch đứng
+                    .append(b.getBase64Image()).append(";"); // 🔥 GỬI KÈM ẢNH
         }
-
         return sb.toString();
     }
 

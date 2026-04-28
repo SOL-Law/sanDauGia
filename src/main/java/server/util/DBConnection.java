@@ -6,27 +6,26 @@ import java.sql.DriverManager;
 public class DBConnection {
     public static Connection getConnection() {
         try {
-            // Lấy từ MYSQL_PUBLIC_URL của Railway
-            String host = "mainline.proxy.rlwy.net";
-            String port = "17571";
-            String dbName = "railway";
-            String user = "root";
-            String pass = "DVWWYfCJZheQAAqasoyZxXgGXFeLteFl";
+            // URL chuẩn 100% cho Aiven (Dùng sslMode=REQUIRED theo đúng yêu cầu của Aiven)
+            String url = "jdbc:mysql://mysql-sandaugia36-database.a.aivencloud.com:17257/defaultdb?sslMode=REQUIRED";
 
-            // Lắp ráp lại thành URL chuẩn của Java JDBC
-            String url = "jdbc:mysql://" + host + ":" + port + "/" + dbName;
+            // Tài khoản
+            String user = "avnadmin";
+
+            // Pass lấy chính xác từ ảnh của bạn, KHÔNG CÓ DẤU CÁCH thừa
+            String pass = "AVNS_1mTgrMcT9Wj5tWLcFRI";
 
             Connection conn = DriverManager.getConnection(url, user, pass);
-            System.out.println("✅ Ngon! Ống hút đã thông lên CLOUD DATABASE!");
+            System.out.println("Ngon! Ống hút đã thông lên AIVEN CLOUD DATABASE!");
             return conn;
         } catch (Exception e) {
-            System.out.println("❌ Oẳng! Lỗi kết nối Cloud rồi!");
+            System.out.println("Hỏng! Lỗi kết nối Cloud Aiven rồi!");
             e.printStackTrace();
             return null;
         }
     }
 
     public static void main(String[] args) {
-        getConnection(); // Chạy thử cái này xem có ra chữ Xanh không nhé!
+        getConnection();
     }
 }

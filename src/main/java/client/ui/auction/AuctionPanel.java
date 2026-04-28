@@ -45,73 +45,66 @@ public class AuctionPanel extends JPanel {
 
         background.setLayout(new BorderLayout());
 
+        // DESKTOP PANEL
         // =========================
-        // DESKTOP PANEL (GIỮ FLOWLAYOUT NHƯ CŨ)
-        // =========================
-        desktop = new JPanel(
-                new FlowLayout(
-                        FlowLayout.LEFT,
-                        40,
-                        40
-                )
-        );
-
+        desktop = new JPanel(new FlowLayout(FlowLayout.LEFT, 40, 40));
         desktop.setOpaque(false);
 
-        // =========================
-        // SCROLL (FIX NHẸ, KHÔNG PHÁ BACKGROUND)
-        // =========================
-        JScrollPane scroll = new JScrollPane(desktop);
+        // 🔥 TUYỆT CHIÊU MỚI TẠI ĐÂY: Tạo một cái bọc (Wrapper)
+        JPanel wrapper = new JPanel(new BorderLayout());
+        wrapper.setOpaque(false);
+        // Nhét desktop lên trên cùng (NORTH) để ép nó luôn giữ đúng kích thước
+        wrapper.add(desktop, BorderLayout.NORTH);
 
+        // Nhét cái bọc vào JScrollPane thay vì nhét desktop
+        JScrollPane scroll = new JScrollPane(wrapper);
         scroll.setBorder(null);
-
-        // 🔥 CHỈ FIX NHẸ: KHÔNG làm mất background
         scroll.setOpaque(false);
         scroll.getViewport().setOpaque(false);
-
         scroll.getVerticalScrollBar().setUnitIncrement(16);
 
         background.add(scroll, BorderLayout.CENTER);
-
         add(background, BorderLayout.CENTER);
     }
+
 
     // =========================
     // LOAD ITEMS (FIX HIỂN THỊ)
     // =========================
     public void loadItems(String data) {
-
         SwingUtilities.invokeLater(() -> {
 
-            if (data == null || data.trim().isEmpty()) {
-                desktop.removeAll();
-                desktop.revalidate();
-                desktop.repaint();
-                return;
+            // 1. TẠO MỘT CÁI DESKTOP MỚI TINH (Vứt bỏ hoàn toàn cái cũ)
+            JPanel newDesktop = new JPanel(new FlowLayout(FlowLayout.LEFT, 40, 40));
+            newDesktop.setOpaque(false);
+
+            // 2. NHỒI DỮ LIỆU VÀO CÁI MỚI
+            if (data != null && !data.trim().isEmpty()) {
+                String[] arr = data.split(";");
+                for (String item : arr) {
+                    if (item.trim().isEmpty()) continue;
+
+                    String[] p = item.split("\\|", -1);
+                    if (p.length < 3) continue;
+
+                    String base64Img = (p.length > 3) ? p[3] : "";
+                    newDesktop.add(new DesktopItemIcon(p[0], p[1], p[2], base64Img, onSelect));
+                }
             }
 
-            desktop.removeAll();
+            // 3. TÌM SCROLLPANE VÀ "THAY MÁU"
+            JScrollPane scroll = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, desktop);
+            if (scroll != null) {
+                JPanel wrapper = new JPanel(new BorderLayout());
+                wrapper.setOpaque(false);
+                wrapper.add(newDesktop, BorderLayout.NORTH);
 
-            String[] arr = data.split(";");
-
-            for (String item : arr) {
-
-                if (item.isEmpty()) continue;
-
-                String[] p = item.split("\\|");
-
-                if (p.length < 3) continue;
-
-                desktop.add(new DesktopItemIcon(
-                        p[0],
-                        p[1],
-                        p[2],
-                        onSelect
-                ));
+                // 🔥 Lệnh thần thánh: Ép ScrollPane vứt bỏ giao diện cũ, dùng giao diện mới
+                scroll.setViewportView(wrapper);
             }
 
-            desktop.revalidate();
-            desktop.repaint();
+            // 4. Cập nhật lại con trỏ cho lần sau
+            desktop = newDesktop;
         });
     }
 }

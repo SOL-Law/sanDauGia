@@ -19,7 +19,6 @@ public class UserDao {
 
             pst.setString(1, username);
             pst.setString(2, password);
-
             ResultSet rs = pst.executeQuery();
 
             if (rs.next()) {
@@ -54,13 +53,12 @@ public class UserDao {
             }
 
             // insert user (role mặc định BIDDER)
-            String insertSql = "INSERT INTO users (username, password, email, role) VALUES (?, ?, ?, ?)";
+            String insertSql = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
             PreparedStatement insertStmt = conn.prepareStatement(insertSql);
 
             insertStmt.setString(1, username);
             insertStmt.setString(2, password);
-            insertStmt.setString(3, "newuser@email.com");
-            insertStmt.setString(4, "BIDDER"); // 🔥 mặc định
+            insertStmt.setString(3, "BIDDER"); // mặc định
 
             int rows = insertStmt.executeUpdate();
 

@@ -29,7 +29,7 @@ public class ClientHandler implements Runnable {
                     socket.getOutputStream(),
                     true
             );
-            AuctionServer.sendAuctionDataTo(this);
+
 
         } catch (Exception e) {
             e.printStackTrace();
@@ -82,6 +82,10 @@ public class ClientHandler implements Runnable {
 
                     case "UPLOAD_ITEM":
                         handleUpload(payload);
+                        break;
+
+                    case "GET_AUCTION":
+                        sendAuctionData(); // Gọi hàm gửi dữ liệu có sẵn của bạn
                         break;
                 }
             }
@@ -271,15 +275,18 @@ public class ClientHandler implements Runnable {
         String name =
                 (String) obj.get("name");
 
-        double price =
-                (double) obj.get("price");
+        double price = Double.parseDouble(obj.get("price").toString());
+
+        String base64Image =
+                (String) obj.get("image");
 
         AuctionManager manager =
                 AuctionManager.getInstance();
 
         manager.addItem(
                 name,
-                (int) price
+                (int) price,
+                base64Image
         );
 
         String data =
@@ -353,9 +360,9 @@ public class ClientHandler implements Runnable {
         );
     }
 
-    public void sendMessage(String msg) {
+    public synchronized void sendMessage(String msg) {
 
         out.println(msg);
-
+        out.flush();
     }
 }

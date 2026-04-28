@@ -52,8 +52,6 @@ public class AuthFrame extends JFrame {
 
                 while ((msg = in.readLine()) != null) {
 
-                    System.out.println("Server response: " + msg);
-
                     Request res = gson.fromJson(msg, Request.class);
 
                     switch (res.getType()) {   // 🔥 FIX Ở ĐÂY
@@ -82,7 +80,7 @@ public class AuthFrame extends JFrame {
                                 loginSuccess("USER");
                             }
 
-                            break;
+                            return;
 
                         case "LOGIN_FAIL":
 
@@ -99,6 +97,13 @@ public class AuthFrame extends JFrame {
                                     this,
                                     "Đăng ký thành công!"
                             );
+
+                            break;
+
+                        case "REGISTER_FAIL":
+                            SwingUtilities.invokeLater(() -> {
+                                JOptionPane.showMessageDialog(AuthFrame.this, "Tài khoản đã tồn tại, vui lòng chọn tên khác!");
+                            });
 
                             break;
 

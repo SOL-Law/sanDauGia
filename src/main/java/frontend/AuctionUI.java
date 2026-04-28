@@ -13,6 +13,8 @@ import java.io.PrintWriter;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 
+import client.ui.auction.UserProfileButton;
+
 public class AuctionUI extends JFrame {
 
     private JTextField bidField;
@@ -45,6 +47,7 @@ public class AuctionUI extends JFrame {
         initUI();
 
         startListeningServer();
+        this.setVisible(true);
 
         // 🔥 FIX: request initial data SAU khi UI + listener ổn định
         SwingUtilities.invokeLater(() -> {
@@ -73,6 +76,7 @@ public class AuctionUI extends JFrame {
                 String msg;
 
                 while ((msg = in.readLine()) != null) {
+                    System.out.println(">>> Server response : " + msg);
 
                     Request res = gson.fromJson(msg, Request.class);
 
@@ -147,10 +151,16 @@ public class AuctionUI extends JFrame {
         JButton historyButton = new JButton("📜 History");
         historyButton.addActionListener(e -> showHistoryPopup());
 
-        JPanel rightTop = new JPanel(new FlowLayout(FlowLayout.RIGHT));
+        // GỌI CÁI AVATAR TRÒN RA (Truyền tên user vào, tạm thời mình để cứng là userRole)
+        UserProfileButton avatarButton = new UserProfileButton(userRole);
+
+        // --- SẮP XẾP LẠI GÓC PHẢI TRÊN CÙNG ---
+        JPanel rightTop = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 5)); // Thêm khoảng cách cho đẹp
         rightTop.setOpaque(false);
+
         rightTop.add(timerLabel);
         rightTop.add(historyButton);
+        rightTop.add(avatarButton); //  Nhét Avatar vào cuối cùng
 
         topPanel.add(title, BorderLayout.WEST);
         topPanel.add(rightTop, BorderLayout.EAST);

@@ -99,13 +99,26 @@ public class AuctionServer {
 
             return;
         }
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.shutdownNow();
+            try {
+                // Đợi 1 giây để nó thực sự chết hẳn
+                if (!scheduler.awaitTermination(1, TimeUnit.SECONDS)) {
+                    System.out.println("⚠️ Scheduler cũ quá lì lợm!");
+                }
+            } catch (InterruptedException e) {
+                e.printStackTrace();
+            }
+        }
 
         isAuctionRunning = true;
 
-        AuctionManager
-                .getInstance()
-                .startNewSession();
+        AuctionManager manager = AuctionManager.getInstance();
+        manager.startNewSession();
 
+        // BƯỚC QUAN TRỌNG: Gửi danh sách đồ ngay khi vừa Bắt đầu
+        String data = manager.getAllItems();
+        broadcast(gson.toJson(new Request("UPDATE_AUCTION", data)));
         remainingTime = seconds;
 
         System.out.println(
@@ -131,6 +144,7 @@ public class AuctionServer {
         scheduler.scheduleAtFixedRate(() -> {
 
             try {
+                if (!isAuctionRunning) return;
 
                 broadcast(
 
@@ -147,10 +161,7 @@ public class AuctionServer {
 
                     System.out.println("🔴 HẾT GIỜ");
 
-                    AuctionManager manager =
-                            AuctionManager.getInstance();
-
-                    manager.endAuction();
+                    AuctionManager.getInstance().endAuction();
 
                     String result =
                             manager.getAllItems();
@@ -167,6 +178,8 @@ public class AuctionServer {
                     );
 
                     scheduler.shutdown();
+
+                    scheduler = null;
 
                     isAuctionRunning = false;
 
