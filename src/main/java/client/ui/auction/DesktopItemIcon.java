@@ -2,109 +2,221 @@ package client.ui.auction;
 
 import javax.swing.*;
 import java.awt.*;
-import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
-import java.util.function.Consumer;
+import java.awt.event.*;
 import java.util.Base64;
+import java.util.function.Consumer;
 
 public class DesktopItemIcon extends JPanel {
 
     private boolean hovered = false;
     private boolean selected = false;
+
+    private static DesktopItemIcon currentSelected;
+
     private String itemName;
 
-    // Hàm tạo ĐÃ ĐƯỢC THÊM BIẾN base64Image
     public DesktopItemIcon(
             String name,
             String price,
             String leader,
-            String base64Image, // 🔥 MỚI THÊM Ở ĐÂY
+            String base64Image,
             Consumer<String> onClick
     ) {
 
         this.itemName = name;
 
-        setPreferredSize(new Dimension(130,160));
-        setMinimumSize(new Dimension(130, 160));
+        // TO HƠN ĐỂ KHỚP KHUNG
+        setPreferredSize(new Dimension(180,180));
+        setMinimumSize(new Dimension(180,180));
+        setMaximumSize(new Dimension(180,180));
+
         setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
         setOpaque(false);
 
-        // 🔥 GỌI HÀM GIẢI MÃ ẢNH TỪ MẠNG
-        JLabel icon = new JLabel(loadIconFromNetwork(base64Image));
+        JLabel icon =
+                new JLabel(loadIcon(name, base64Image));
+
         icon.setAlignmentX(CENTER_ALIGNMENT);
 
-        JLabel nameLabel = new JLabel(name);
+        JLabel nameLabel =
+                new JLabel(name);
+
+        nameLabel.setFont(
+                new Font("Segoe UI", Font.BOLD, 16)
+        );
+
         nameLabel.setForeground(Color.WHITE);
         nameLabel.setAlignmentX(CENTER_ALIGNMENT);
 
-        JLabel priceLabel = new JLabel(price + " VNĐ");
-        priceLabel.setForeground(new Color(0,255,150));
+        JLabel priceLabel =
+                new JLabel(price + " VNĐ");
+
+        priceLabel.setFont(
+                new Font("Segoe UI", Font.BOLD, 15)
+        );
+
+        priceLabel.setForeground(
+                new Color(255,215,0)
+        );
+
         priceLabel.setAlignmentX(CENTER_ALIGNMENT);
 
-        JLabel leaderLabel = new JLabel("👑 " + leader);
+        JLabel leaderLabel =
+                new JLabel("👑 " + leader);
+
+        leaderLabel.setFont(
+                new Font("Segoe UI", Font.PLAIN, 13)
+        );
+
         leaderLabel.setForeground(Color.LIGHT_GRAY);
         leaderLabel.setAlignmentX(CENTER_ALIGNMENT);
 
+        add(Box.createVerticalStrut(18));
         add(icon);
-        add(Box.createVerticalStrut(6));
+        add(Box.createVerticalStrut(10));
         add(nameLabel);
+        add(Box.createVerticalStrut(4));
         add(priceLabel);
+        add(Box.createVerticalStrut(4));
         add(leaderLabel);
 
         addMouseListener(new MouseAdapter() {
+
             public void mouseEntered(MouseEvent e) {
                 hovered = true;
                 repaint();
             }
+
             public void mouseExited(MouseEvent e) {
                 hovered = false;
                 repaint();
             }
+
             public void mouseClicked(MouseEvent e) {
+
+                if(currentSelected != null) {
+                    currentSelected.selected = false;
+                    currentSelected.repaint();
+                }
+
                 selected = true;
+                currentSelected = DesktopItemIcon.this;
+
                 onClick.accept(itemName);
+
                 repaint();
             }
         });
     }
 
-    // HÀM GIẢI MÃ BASE64 THÀNH ẢNH
-    private ImageIcon loadIconFromNetwork(String base64Image) {
+    // ===========================
+    // ICON LOADER
+    // ===========================
+    private ImageIcon loadIcon(
+            String name,
+            String base64
+    ) {
+
         try {
-            if (base64Image == null || base64Image.isEmpty() || base64Image.equals("none")) {
-                return new ImageIcon("src/main/java/frontend/icons/default.png");
+
+            if(base64 != null &&
+                    !base64.isEmpty() &&
+                    !base64.equals("none")) {
+
+                byte[] bytes =
+                        Base64.getDecoder()
+                                .decode(base64);
+
+                ImageIcon icon =
+                        new ImageIcon(bytes);
+
+                Image img =
+                        icon.getImage()
+                                .getScaledInstance(
+                                        78,78,
+                                        Image.SCALE_SMOOTH
+                                );
+
+                return new ImageIcon(img);
             }
 
-            // 1. Dịch ngược chuỗi chữ thành mảng Byte
-            byte[] imageBytes = Base64.getDecoder().decode(base64Image);
+        } catch (Exception ignored) {}
 
-            // 2. Tạo thẳng ImageIcon từ mảng Byte (Không cần file trong ổ cứng)
-            ImageIcon icon = new ImageIcon(imageBytes);
+        String lower =
+                name.toLowerCase();
 
-            // 3. Resize cho đẹp
-            Image img = icon.getImage().getScaledInstance(80, 80, Image.SCALE_SMOOTH);
-            return new ImageIcon(img);
+        if(lower.contains("laptop"))
+            return local("src/main/java/frontend/icons/laptop.png");
 
-        } catch (Exception e) {
-            System.out.println("Lỗi giải mã ảnh mạng!");
-            return new ImageIcon("src/main/java/frontend/icons/default.png");
-        }
+        if(lower.contains("phone"))
+            return local("src/main/java/frontend/icons/phone.png");
+
+        if(lower.contains("watch"))
+            return local("src/main/java/frontend/icons/watch.png");
+
+        return local("src/main/java/frontend/icons/watch.png");
     }
 
-    @Override
+    private ImageIcon local(String path) {
+
+        ImageIcon icon =
+                new ImageIcon(path);
+
+        Image img =
+                icon.getImage()
+                        .getScaledInstance(
+                                78,78,
+                                Image.SCALE_SMOOTH
+                        );
+
+        return new ImageIcon(img);
+    }
+
+    // ===========================
+    // PAINT
+    // ===========================
     protected void paintComponent(Graphics g) {
+
+        Graphics2D g2 =
+                (Graphics2D) g;
+
+        g2.setRenderingHint(
+                RenderingHints.KEY_ANTIALIASING,
+                RenderingHints.VALUE_ANTIALIAS_ON
+        );
+
+        if(hovered) {
+
+            g2.setColor(
+                    new Color(255,255,255,18)
+            );
+
+            g2.fillRoundRect(
+                    0,0,
+                    getWidth(),
+                    getHeight(),
+                    18,18
+            );
+        }
+
+        if(selected) {
+
+            g2.setColor(
+                    new Color(0,180,255)
+            );
+
+            g2.setStroke(
+                    new BasicStroke(2f)
+            );
+
+            g2.drawRoundRect(
+                    1,1,
+                    getWidth()-3,
+                    getHeight()-3,
+                    18,18
+            );
+        }
+
         super.paintComponent(g);
-        Graphics2D g2 = (Graphics2D) g;
-
-        if (hovered) {
-            g2.setColor(new Color(0,150,255,80));
-            g2.fillRoundRect(0, 0, getWidth(), getHeight(), 20, 20);
-        }
-
-        if (selected) {
-            g2.setColor(new Color(0,200,255));
-            g2.setStroke(new BasicStroke(3));
-            g2.drawRoundRect(2, 2, getWidth()-4, getHeight()-4, 20, 20);
-        }
     }
 }

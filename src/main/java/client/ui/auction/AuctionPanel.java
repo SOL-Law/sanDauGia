@@ -14,10 +14,8 @@ public class AuctionPanel extends JPanel {
         this.onSelect = onSelect;
 
         setLayout(new BorderLayout());
+        setOpaque(false);
 
-        // =========================
-        // BACKGROUND (GIỮ NGUYÊN BẢN CỦA BẠN)
-        // =========================
         JPanel background = new JPanel() {
 
             Image bg = new ImageIcon(
@@ -38,73 +36,160 @@ public class AuctionPanel extends JPanel {
                         this
                 );
 
-                g.setColor(new Color(0, 0, 0, 120));
+                g.setColor(new Color(0, 0, 0, 140));
                 g.fillRect(0, 0, getWidth(), getHeight());
             }
         };
 
         background.setLayout(new BorderLayout());
 
-        // DESKTOP PANEL
-        // =========================
-        desktop = new JPanel(new FlowLayout(FlowLayout.LEFT, 40, 40));
-        desktop.setOpaque(false);
+        desktop = createGridPanel();
 
-        // 🔥 TUYỆT CHIÊU MỚI TẠI ĐÂY: Tạo một cái bọc (Wrapper)
-        JPanel wrapper = new JPanel(new BorderLayout());
-        wrapper.setOpaque(false);
-        // Nhét desktop lên trên cùng (NORTH) để ép nó luôn giữ đúng kích thước
-        wrapper.add(desktop, BorderLayout.NORTH);
-
-        // Nhét cái bọc vào JScrollPane thay vì nhét desktop
-        JScrollPane scroll = new JScrollPane(wrapper);
+        JScrollPane scroll = new JScrollPane(desktop);
         scroll.setBorder(null);
         scroll.setOpaque(false);
         scroll.getViewport().setOpaque(false);
-        scroll.getVerticalScrollBar().setUnitIncrement(16);
+        scroll.getVerticalScrollBar().setUnitIncrement(18);
 
         background.add(scroll, BorderLayout.CENTER);
+
         add(background, BorderLayout.CENTER);
     }
 
+    // ==================================
+    // PANEL CHỨA ITEM
+    // ==================================
+    private JPanel createGridPanel() {
 
-    // =========================
-    // LOAD ITEMS (FIX HIỂN THỊ)
-    // =========================
+        JPanel panel = new JPanel(
+                new FlowLayout(
+                        FlowLayout.LEFT,
+                        14,
+                        14
+                )
+        );
+
+        panel.setBorder(
+                BorderFactory.createEmptyBorder(
+                        20, 20, 20, 20
+                )
+        );
+
+        panel.setOpaque(false);
+
+        return panel;
+    }
+
+    // ==================================
+    // LOAD ITEMS
+    // ==================================
     public void loadItems(String data) {
+
         SwingUtilities.invokeLater(() -> {
 
-            // 1. TẠO MỘT CÁI DESKTOP MỚI TINH (Vứt bỏ hoàn toàn cái cũ)
-            JPanel newDesktop = new JPanel(new FlowLayout(FlowLayout.LEFT, 40, 40));
-            newDesktop.setOpaque(false);
+            JPanel newPanel = createGridPanel();
 
-            // 2. NHỒI DỮ LIỆU VÀO CÁI MỚI
             if (data != null && !data.trim().isEmpty()) {
+
                 String[] arr = data.split(";");
+
                 for (String item : arr) {
-                    if (item.trim().isEmpty()) continue;
+
+                    if (item.trim().isEmpty())
+                        continue;
 
                     String[] p = item.split("\\|", -1);
-                    if (p.length < 3) continue;
 
-                    String base64Img = (p.length > 3) ? p[3] : "";
-                    newDesktop.add(new DesktopItemIcon(p[0], p[1], p[2], base64Img, onSelect));
+                    if (p.length < 3)
+                        continue;
+
+                    String base64 =
+                            (p.length > 3)
+                                    ? p[3]
+                                    : "";
+
+                    JPanel wrapper =
+                            createAnimatedCard(
+                                    new DesktopItemIcon(
+                                            p[0],
+                                            p[1],
+                                            p[2],
+                                            base64,
+                                            onSelect
+                                    )
+                            );
+
+                    newPanel.add(wrapper);
                 }
             }
 
-            // 3. TÌM SCROLLPANE VÀ "THAY MÁU"
-            JScrollPane scroll = (JScrollPane) SwingUtilities.getAncestorOfClass(JScrollPane.class, desktop);
-            if (scroll != null) {
-                JPanel wrapper = new JPanel(new BorderLayout());
-                wrapper.setOpaque(false);
-                wrapper.add(newDesktop, BorderLayout.NORTH);
+            JScrollPane scroll =
+                    (JScrollPane)
+                            SwingUtilities.getAncestorOfClass(
+                                    JScrollPane.class,
+                                    desktop
+                            );
 
-                // 🔥 Lệnh thần thánh: Ép ScrollPane vứt bỏ giao diện cũ, dùng giao diện mới
-                scroll.setViewportView(wrapper);
+            if (scroll != null) {
+                scroll.setViewportView(newPanel);
             }
 
-            // 4. Cập nhật lại con trỏ cho lần sau
-            desktop = newDesktop;
+            desktop = newPanel;
+
+            revalidate();
+            repaint();
         });
+    }
+
+    // ==================================
+    // CARD ITEM FRAME VUÔNG
+    // ==================================
+    private JPanel createAnimatedCard(JComponent child) {
+
+        JPanel card = new JPanel(new BorderLayout()) {
+
+            Image frame =
+                    new ImageIcon(
+                            "src/main/java/frontend/icons/frame.png"
+                    ).getImage();
+
+            @Override
+            public void paint(Graphics g) {
+
+                // vẽ child trước
+                super.paint(g);
+
+                Graphics2D g2 = (Graphics2D) g;
+
+                g2.setRenderingHint(
+                        RenderingHints.KEY_ANTIALIASING,
+                        RenderingHints.VALUE_ANTIALIAS_ON
+                );
+
+                // vẽ khung lên trên cùng
+                g2.drawImage(
+                        frame,
+                        0,
+                        0,
+                        getWidth(),
+                        getHeight(),
+                        this
+                );
+            }
+        };
+
+        card.setOpaque(false);
+
+        card.setPreferredSize(new Dimension(220,220));
+        card.setMinimumSize(new Dimension(220,220));
+        card.setMaximumSize(new Dimension(220,220));
+
+        card.setBorder(
+                BorderFactory.createEmptyBorder(18,18,18,18)
+        );
+
+        card.add(child, BorderLayout.CENTER);
+
+        return card;
     }
 }
