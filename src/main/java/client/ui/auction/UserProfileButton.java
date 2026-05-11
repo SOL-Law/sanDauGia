@@ -61,8 +61,30 @@ public class UserProfileButton extends JButton {
         // --- 5. Donate ---
         JMenuItem donateItem = new JMenuItem("☕ Donate cho Dev");
         donateItem.setForeground(Color.MAGENTA);
-        donateItem.addActionListener(e -> JOptionPane.showMessageDialog(this, "Cảm ơn bạn đã donate!"));
+        donateItem.addActionListener(e -> {
+            try {
+                // Đọc thẳng từ đường dẫn thư mục bên ngoài (KHÔNG dùng getResource nữa)
+                ImageIcon originalIcon = new ImageIcon("src/main/java/frontend/icons/qr-donate.jpg");
 
+                // Kiểm tra xem ảnh có load được không
+                if (originalIcon.getImageLoadStatus() == java.awt.MediaTracker.ERRORED) {
+                    JOptionPane.showMessageDialog(this, "Lỗi: Không tìm thấy ảnh QR tại đường dẫn này!");
+                    return;
+                }
+                // Thu nhỏ ảnh lại kích thước 300x300
+                Image scaledImg = originalIcon.getImage().getScaledInstance(400, 400, Image.SCALE_SMOOTH);
+                ImageIcon finalIcon = new ImageIcon(scaledImg);
+
+                // Hiển thị Popup
+                JOptionPane.showMessageDialog(this,
+                        "Cảm ơn bạn đã ủng hộ Dev cốc cafe nhé! <3",
+                        "Ủng hộ tác giả",
+                        JOptionPane.INFORMATION_MESSAGE,
+                        finalIcon);
+            } catch (Exception ex) {
+                ex.printStackTrace();
+            }
+        });
         // --- 6. Cài đặt ---
         JMenuItem settingsItem = new JMenuItem("⚙️ Cài đặt");
         settingsItem.addActionListener(e -> JOptionPane.showMessageDialog(this, "Mở phần cài đặt..."));
@@ -73,11 +95,16 @@ public class UserProfileButton extends JButton {
         logoutItem.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc chắn muốn đăng xuất?", "Đăng xuất", JOptionPane.YES_NO_OPTION);
             if (confirm == JOptionPane.YES_OPTION) {
-                // Xử lý đóng cửa sổ và quay về màn hình Login
+                // 1. Tắt màn hình Đấu giá hiện tại
                 Window window = SwingUtilities.getWindowAncestor(this);
                 if (window != null) window.dispose();
-                System.out.println("Đã đăng xuất!");
-                // Gọi lại màn hình Login ở đây: new LoginFrame().setVisible(true);
+
+                System.out.println("Đã đăng xuất, quay về màn hình Auth!");
+
+                // 2. Mở lại màn hình Login (AuthFrame)
+                SwingUtilities.invokeLater(() -> {
+                    new client.ui.auth.AuthFrame(); // Gọi lại AuthFrame của bạn
+                });
             }
         });
 
