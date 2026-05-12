@@ -3,6 +3,9 @@ package model;
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 public class AuctionManager {
 
@@ -19,12 +22,18 @@ public class AuctionManager {
     // 🔥 FIX QUAN TRỌNG: mặc định phải false
     private boolean isRunning = false;
 
+    // =========================
+    // TIMER COUNTDOWN
+    // =========================
+    private ScheduledExecutorService scheduler;
+    private int remainingSeconds = 0;
+
     private AuctionManager() {
 
         // dữ liệu mẫu ban đầu
-        addItem("Laptop", 100,"");
-        addItem("Phone", 200,"");
-        addItem("Watch", 300,"");
+        addItem("Laptop", 100, "");
+        addItem("Phone", 200, "");
+        addItem("Watch", 300, "");
 
         System.out.println("✅ AuctionManager initialized");
         printAllItems();
@@ -36,10 +45,7 @@ public class AuctionManager {
     public static synchronized AuctionManager getInstance() {
 
         if (instance == null) {
-
-            instance =
-                    new AuctionManager();
-
+            instance = new AuctionManager();
         }
 
         return instance;
@@ -68,7 +74,6 @@ public class AuctionManager {
                 if (price > bid.getCurrentPrice()) {
 
                     bid.setCurrentPrice(price);
-
                     bid.setLeader(user);
 
                     System.out.println(
@@ -112,9 +117,7 @@ public class AuctionManager {
                 idCounter.incrementAndGet();
 
         items.put(
-
                 newId,
-
                 new BidInfo(
                         name,
                         startPrice,
@@ -136,12 +139,14 @@ public class AuctionManager {
     // =========================
     public synchronized String getAllItems() {
         StringBuilder sb = new StringBuilder();
+
         for (BidInfo b : items.values()) {
             sb.append(b.getItem()).append("|")
                     .append(b.getCurrentPrice()).append("|")
-                    .append(b.getLeader()).append("|") // Thêm gạch đứng
-                    .append(b.getBase64Image()).append(";"); // 🔥 GỬI KÈM ẢNH
+                    .append(b.getLeader()).append("|")
+                    .append(b.getBase64Image()).append(";");
         }
+
         return sb.toString();
     }
 
@@ -166,11 +171,76 @@ public class AuctionManager {
     }
 
     // =========================
+    // START SESSION WITH TIMER
+    // =========================
+    public synchronized void startAuctionWithTimer(int durationSeconds) {
+
+        // Khởi động phiên đấu giá như bình thường
+        startNewSession();
+
+        // Nếu timer cũ còn chạy thì dừng lại
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.shutdownNow();
+        }
+
+        // Thiết lập thời gian đếm ngược
+        remainingSeconds = durationSeconds;
+
+        // Tạo scheduler mới
+        scheduler = Executors.newSingleThreadScheduledExecutor();
+
+        // Chạy mỗi 1 giây
+        scheduler.scheduleAtFixedRate(() -> {
+
+            synchronized (AuctionManager.this) {
+
+                // Nếu phiên đã kết thúc thì dừng timer
+                if (!isRunning) {
+                    scheduler.shutdown();
+                    return;
+                }
+
+                remainingSeconds--;
+
+                System.out.println(
+                        "⏳ Remaining: "
+                                + remainingSeconds
+                                + "s"
+                );
+
+                // Hết thời gian
+                if (remainingSeconds <= 0) {
+                    endAuction();
+                    scheduler.shutdown();
+
+                    System.out.println(
+                            "🏁 Auction automatically ended."
+                    );
+                }
+            }
+
+        }, 1, 1, TimeUnit.SECONDS);
+    }
+
+    // =========================
+    // GET REMAINING TIME
+    // =========================
+    public synchronized int getRemainingSeconds() {
+        return remainingSeconds;
+    }
+
+    // =========================
     // END SESSION
     // =========================
     public synchronized void endAuction() {
 
         isRunning = false;
+        remainingSeconds = 0;
+
+        // Dừng timer nếu còn chạy
+        if (scheduler != null && !scheduler.isShutdown()) {
+            scheduler.shutdownNow();
+        }
 
         System.out.println(
                 "🔴 AUCTION ENDED"
@@ -181,9 +251,7 @@ public class AuctionManager {
     // CHECK STATUS
     // =========================
     public synchronized boolean isRunning() {
-
         return isRunning;
-
     }
 
     // =========================
@@ -198,15 +266,10 @@ public class AuctionManager {
         for (BidInfo bid : items.values()) {
 
             System.out.println(
-
                     bid.getItem()
-
                             + " | "
-
                             + bid.getCurrentPrice()
-
                             + " | "
-
                             + bid.getLeader()
             );
         }
