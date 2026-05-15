@@ -32,6 +32,8 @@ public class AuctionUI extends JFrame {
 
     private String selectedItem = null;
 
+    private UserProfileButton avatarButton;
+
     public AuctionUI(PrintWriter out, BufferedReader in, Gson gson, String role) {
 
         this.out = out;
@@ -62,6 +64,9 @@ public class AuctionUI extends JFrame {
         out.println(gson.toJson(
                 new Request("GET_AUCTION", "")
         ));
+        out.println(gson.toJson(
+                new Request("GET_BALANCE", userRole)
+        ));
     }
 
     // =========================
@@ -87,7 +92,14 @@ public class AuctionUI extends JFrame {
                             SwingUtilities.invokeLater(() -> {
                                 updateAuctionInfo(res.getPayload());
                             });
-
+                            break;
+                        case "UPDATE_BALANCE":
+                            SwingUtilities.invokeLater(() -> {
+                                // Lấy chuỗi tiền Server gửi, ép kiểu về số thập phân
+                                double balance = Double.parseDouble(res.getPayload());
+                                // Đưa tiền vào cái Avatar để nó tự đổi chữ "0.0" thành tiền thật
+                                avatarButton.updateBalance(balance);
+                            });
                             break;
 
                         case "START_SESSION":
@@ -100,6 +112,13 @@ public class AuctionUI extends JFrame {
 
                         case "TIMER":
                             updateTimer(Integer.parseInt(res.getPayload()));
+                            break;
+                        case "HISTORY_DATA":
+                            SwingUtilities.invokeLater(() -> {
+                                setCursor(Cursor.getDefaultCursor());
+                                // Mở bảng lịch sử
+                                new client.ui.history.HistoryDialog(AuctionUI.this, res.getPayload()).setVisible(true);
+                            });
                             break;
                     }
                 }
@@ -149,10 +168,15 @@ public class AuctionUI extends JFrame {
         timerLabel.setForeground(Color.YELLOW);
 
         JButton historyButton = new JButton("📜 History");
-        historyButton.addActionListener(e -> showHistoryPopup());
+        historyButton.addActionListener(e -> {
+            // Ép con trỏ chuột của form hiện tại thành hình xoay xoay
+            AuctionUI.this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
+            // Gọi lệnh gửi đi (KHÔNG gõ chữ type: hay payload:)
+            out.println(gson.toJson(new Request("GET_HISTORY", "")));
+        });
 
         // GỌI CÁI AVATAR TRÒN RA (Truyền tên user vào, tạm thời mình để cứng là userRole)
-        UserProfileButton avatarButton = new UserProfileButton(userRole);
+        avatarButton = new UserProfileButton("admin", out, gson);
 
         // --- SẮP XẾP LẠI GÓC PHẢI TRÊN CÙNG ---
         JPanel rightTop = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 5)); // Thêm khoảng cách cho đẹp
@@ -235,10 +259,14 @@ public class AuctionUI extends JFrame {
 
             int price = Integer.parseInt(bidField.getText());
 
+            //  Đã fix: Lấy thẳng tên user (role) từ Avatar để gửi lên
+            String currentUser = avatarButton.getUsername();
+
             String payload = String.format(
-                    "{\"item\":\"%s\",\"price\":%d}",
+                    "{\"item\":\"%s\",\"price\":%d, \"username\":\"%s\"}",
                     selectedItem,
-                    price
+                    price,
+                    currentUser
             );
 
             out.println(gson.toJson(
@@ -249,28 +277,12 @@ public class AuctionUI extends JFrame {
             JOptionPane.showMessageDialog(this, "Giá không hợp lệ!");
         }
     }
-
     // ========================= UPDATE =========================
     public void updateAuctionInfo(String data) {
-
         if (data == null || data.replace(" ", "").isEmpty()) {
             return;
         }
-
         auctionPanel.loadItems(data);
-
-        String[] items = data.split(";");
-
-        for (String item : items) {
-
-            if (item.isEmpty()) continue;
-
-            String[] parts = item.split("\\|");
-
-            if (parts.length < 3) continue;
-
-            addHistory(parts[0], parts[1], parts[2]);
-        }
     }
 
     // ========================= HISTORY =========================

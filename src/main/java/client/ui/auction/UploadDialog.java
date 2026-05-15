@@ -23,6 +23,7 @@ public class UploadDialog extends JDialog {
     private JTextField nameField;
     private JTextField priceField;
     private JLabel imagePreview;
+    private JTextField timeField;
 
     private File selectedFile;
 
@@ -38,9 +39,11 @@ public class UploadDialog extends JDialog {
 
         nameField = new JTextField();
         priceField = new JTextField();
+        timeField = new JTextField();
 
         styleField(nameField, "Tên sản phẩm");
         styleField(priceField, "Giá khởi điểm");
+        styleField(timeField, "Thời gian đấu giá (giây)");
 
         JButton chooseBtn = new JButton("Chọn ảnh");
         JButton uploadBtn = new JButton("Upload");
@@ -53,6 +56,7 @@ public class UploadDialog extends JDialog {
 
         panel.add(nameField);
         panel.add(priceField);
+        panel.add(timeField);
         panel.add(Box.createVerticalStrut(10));
         panel.add(chooseBtn);
         panel.add(imagePreview);
@@ -84,6 +88,7 @@ public class UploadDialog extends JDialog {
 
         String name = nameField.getText().trim();
         String price = priceField.getText().trim();
+        String time = timeField.getText().trim();
 
         try {
             String base64Image = compressImageToBase64(selectedFile);
@@ -92,6 +97,10 @@ public class UploadDialog extends JDialog {
             payloadObj.addProperty("name", name);
             payloadObj.addProperty("price", price);
             payloadObj.addProperty("image", base64Image);
+
+            // Nếu người dùng không nhập gì, mặc định là 60s
+            int duration = time.isEmpty() ? 60 : Integer.parseInt(time);
+            payloadObj.addProperty("time", duration);
 
             Request req = new Request("UPLOAD_ITEM", gson.toJson(payloadObj));
             String jsonMessage = gson.toJson(req);

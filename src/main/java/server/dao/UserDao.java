@@ -73,4 +73,60 @@ public class UserDao {
 
         return false;
     }
+    // ==========================================
+    // LẤY SỐ DƯ TÀI KHOẢN (GET BALANCE)
+    // ==========================================
+    public static double getBalance(String username) {
+        double balance = 0.0;
+
+        try (Connection conn = server.util.DBConnection.getConnection()) {
+            // Lệnh SQL: Tìm vào bảng users, lấy ra cột balance của cái thằng có tên trùng với username
+            String sql = "SELECT balance FROM users WHERE username = ?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, username);
+
+            ResultSet rs = stmt.executeQuery();
+
+            // Nếu tìm thấy thằng đó trong DB, lôi tiền của nó ra
+            if (rs.next()) {
+                balance = rs.getDouble("balance");
+            }
+
+        } catch (Exception e) {
+            System.out.println("Lỗi khi lấy số dư từ Database: " + e.getMessage());
+        }
+
+        return balance;
+    }
+    // ==========================================
+    // NẠP TIỀN VÀO TÀI KHOẢN
+    // ==========================================
+    public static boolean deposit(String username, double amount) {
+        try (Connection conn = server.util.DBConnection.getConnection()) {
+            // Lệnh SQL: Lấy số dư cũ CỘNG THÊM số tiền mới
+            String sql = "UPDATE users SET balance = balance + ? WHERE username = ?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setDouble(1, amount);
+            stmt.setString(2, username);
+
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            System.out.println("Lỗi bơm tiền: " + e.getMessage());
+            return false;
+        }
+    }
+    // ==========================================
+    // TRỪ TIỀN NGƯỜI THẮNG ĐẤU GIÁ
+    // ==========================================
+    public static boolean payForItem(String username, double amount) {
+        try (Connection conn = server.util.DBConnection.getConnection()) {
+            String sql = "UPDATE users SET balance = balance - ? WHERE username = ?";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setDouble(1, amount);
+            stmt.setString(2, username);
+            return stmt.executeUpdate() > 0;
+        } catch (Exception e) {
+            return false;
+        }
+    }
 }

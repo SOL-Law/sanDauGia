@@ -6,14 +6,23 @@ import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Ellipse2D;
 
+import com.google.gson.Gson;
+import java.io.PrintWriter;
+
 public class UserProfileButton extends JButton {
 
     private JPopupMenu popupMenu;
     private String username;
-    private double balance = 0.0; // Số dư mặc định (Sau này lấy từ Server)
+    private double balance = 0.0;
+    private JMenuItem balanceItem; // Số dư mặc định (Sau này lấy từ Server)
 
-    public UserProfileButton(String username) {
-        this.username = (username != null && !username.isEmpty()) ? username : "User";
+    private PrintWriter out;
+    private Gson gson;
+
+    public UserProfileButton(String username, PrintWriter out, Gson gson) {
+        this.username = username;
+        this.out = out;
+        this.gson = gson;
 
         // Cố định kích thước hình tròn (Ví dụ: 45x45 pixel)
         setPreferredSize(new Dimension(45, 45));
@@ -41,25 +50,88 @@ public class UserProfileButton extends JButton {
         popupMenu = new JPopupMenu();
 
         // --- 1. Balance (Số dư) ---
-        JMenuItem balanceItem = new JMenuItem("💰 Số dư: " + balance + " VNĐ");
+        String formattedMoney = String.format("%,.0f", this.balance);
+        balanceItem = new JMenuItem("💰 Số dư: " + formattedMoney + " VNĐ");
         balanceItem.setFont(new Font("Segoe UI", Font.BOLD, 14));
         balanceItem.setForeground(new Color(0, 150, 0)); // Màu xanh lá
         balanceItem.setEnabled(false); // Không cho bấm, chỉ để hiển thị
 
-        // --- 2. Nạp tiền ---
-        JMenuItem napTienItem = new JMenuItem("💳 Nạp tiền");
-        napTienItem.addActionListener(e -> JOptionPane.showMessageDialog(this, "Mở form nạp tiền..."));
+
+        // --- 2. Nạp tiền (Bản Fake Ngân Hàng) ---
+        JMenuItem depositItem = new JMenuItem("💳 Nạp tiền");
+        depositItem.addActionListener(e -> {
+            // Hỏi số tiền muốn nạp
+            String input = JOptionPane.showInputDialog(this, "Nhập số tiền muốn nạp (VNĐ):");
+            if (input == null || input.trim().isEmpty()) return;
+
+            try {
+                double amount = Double.parseDouble(input);
+                if (amount <= 0) throw new Exception();
+
+                // Tạo form quét mã QR
+                JDialog qrDialog = new JDialog();
+                qrDialog.setTitle("Cổng thanh toán tự động");
+                qrDialog.setSize(350, 400);
+                qrDialog.setLocationRelativeTo(this);
+                qrDialog.setLayout(new BorderLayout());
+
+                JLabel infoLabel = new JLabel("<html><center>Vui lòng chuyển khoản với nội dung:<br><b style='color:red;'>NAP " + username + "</b></center></html>", SwingConstants.CENTER);
+
+                // Tiện tay lấy luôn cái ảnh Donate lúc nãy ra giả làm mã QR nạp tiền =))
+                ImageIcon qrIcon = new ImageIcon(new ImageIcon("src/main/java/frontend/icons/qr-donate.jpg").getImage().getScaledInstance(200, 200, Image.SCALE_SMOOTH));
+                JLabel qrLabel = new JLabel(qrIcon);
+
+                JButton btnDone = new JButton("Đã chuyển khoản xong");
+                btnDone.setBackground(new Color(0, 150, 0));
+                btnDone.setForeground(Color.WHITE);
+
+                qrDialog.add(infoLabel, BorderLayout.NORTH);
+                qrDialog.add(qrLabel, BorderLayout.CENTER);
+                qrDialog.add(btnDone, BorderLayout.SOUTH);
+
+                // Logic chờ 3 giây
+                btnDone.addActionListener(event -> {
+                    btnDone.setText("Đang chờ ngân hàng xác nhận...");
+                    btnDone.setBackground(Color.GRAY);
+                    btnDone.setEnabled(false);
+                    qrDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
+
+                    // Chạy ngầm để không đơ giao diện
+                    new Thread(() -> {
+                        try {
+                            Thread.sleep(3000); // Ngủ 3 giây tạo cảm giác thật
+                            qrDialog.dispose(); // Đóng form
+
+                            // Gói tiền và tên ném lên Server
+                            String payload = String.format("{\"username\":\"%s\",\"amount\":%f}", username, amount);
+                            out.println(gson.toJson(new network.Request("DEPOSIT", payload)));
+
+                            JOptionPane.showMessageDialog(this, "Ting ting! Nạp tiền thành công.");
+                        } catch (Exception ex) {}
+                    }).start();
+                });
+
+                qrDialog.setVisible(true);
+
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Số tiền không hợp lệ!");
+            }
+        });
 
         // --- 3. Thông tin cá nhân ---
         JMenuItem profileItem = new JMenuItem("👤 Thông tin cá nhân");
-        profileItem.addActionListener(e -> JOptionPane.showMessageDialog(this, "Hiển thị thông tin user..."));
+
 
         // --- 4. Lịch sử đấu giá ---
         JMenuItem historyItem = new JMenuItem("📜 Lịch sử đấu giá của tôi");
-        historyItem.addActionListener(e -> JOptionPane.showMessageDialog(this, "Mở bảng lịch sử..."));
+        historyItem.addActionListener(e -> {
+            // Gửi lệnh lấy lịch sử cá nhân lên server
+            // Lưu ý: out và gson phải được truyền vào constructor của UserProfileButton từ trước
+            out.println(gson.toJson(new network.Request("GET_MY_HISTORY", this.username)));
+        });
 
         // --- 5. Donate ---
-        JMenuItem donateItem = new JMenuItem("☕ Donate cho Dev");
+        JMenuItem donateItem = new JMenuItem(" Donate cho Dev");
         donateItem.setForeground(Color.MAGENTA);
         donateItem.addActionListener(e -> {
             try {
@@ -110,7 +182,7 @@ public class UserProfileButton extends JButton {
 
         // Thêm vào Popup Menu (Dùng addSeparator để kẻ gạch ngang cho đẹp)
         popupMenu.add(balanceItem);
-        popupMenu.add(napTienItem);
+        popupMenu.add(depositItem);
         popupMenu.addSeparator();
 
         popupMenu.add(profileItem);
@@ -122,6 +194,13 @@ public class UserProfileButton extends JButton {
         popupMenu.addSeparator();
 
         popupMenu.add(logoutItem);
+    }
+    public void updateBalance(double newBalance) {
+        this.balance = newBalance;
+        String formattedMoney = String.format("%,.0f", this.balance);
+        // Đổi lại chữ hiển thị trên Menu
+        balanceItem.setText("💰 Số dư: " + formattedMoney + " VNĐ");
+
     }
 
     // ==========================================
@@ -155,5 +234,9 @@ public class UserProfileButton extends JButton {
 
         g2.drawString(initial, x, y);
         g2.dispose();
+    }
+    // Lấy tên người dùng hiện tại
+    public String getUsername() {
+        return this.username;
     }
 }
