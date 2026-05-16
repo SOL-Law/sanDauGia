@@ -41,7 +41,11 @@ public class UserProfileButton extends JButton {
             @Override
             public void mouseClicked(MouseEvent e) {
                 // Hiển thị Menu ngay dưới Avatar
-                popupMenu.show(UserProfileButton.this, 0, getHeight() + 5);
+                int xToaDo = getWidth() - 280;
+
+                // Chiều cao Y thì vẫn để ngay dưới đáy của nút Avatar
+                int yToaDo = getHeight();
+                popupMenu.show(UserProfileButton.this, xToaDo, yToaDo);
             }
         });
     }
@@ -51,14 +55,17 @@ public class UserProfileButton extends JButton {
 
         // --- 1. Balance (Số dư) ---
         String formattedMoney = String.format("%,.0f", this.balance);
-        balanceItem = new JMenuItem("💰 Số dư: " + formattedMoney + " VNĐ");
-        balanceItem.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        balanceItem = new JMenuItem(" Số dư: " + formattedMoney + " VNĐ");
+        balanceItem.setFont(new Font("Times New Roman", Font.BOLD, 16));
         balanceItem.setForeground(new Color(0, 150, 0)); // Màu xanh lá
         balanceItem.setEnabled(false); // Không cho bấm, chỉ để hiển thị
 
 
         // --- 2. Nạp tiền (Bản Fake Ngân Hàng) ---
-        JMenuItem depositItem = new JMenuItem("💳 Nạp tiền");
+        JMenuItem depositItem = new JMenuItem(" Nạp tiền");
+        depositItem.setPreferredSize(new Dimension(280, 40));
+
+        depositItem.setFont(new Font("Helvetica", Font.PLAIN, 16));
         depositItem.addActionListener(e -> {
             // Hỏi số tiền muốn nạp
             String input = JOptionPane.showInputDialog(this, "Nhập số tiền muốn nạp (VNĐ):");
@@ -119,19 +126,27 @@ public class UserProfileButton extends JButton {
         });
 
         // --- 3. Thông tin cá nhân ---
-        JMenuItem profileItem = new JMenuItem("👤 Thông tin cá nhân");
+        JMenuItem profileItem = new JMenuItem(" Thông tin cá nhân");
+        profileItem.setPreferredSize(new Dimension(280, 40));
+
+        profileItem.setFont(new Font("Helvetica", Font.PLAIN, 16));
 
 
         // --- 4. Lịch sử đấu giá ---
-        JMenuItem historyItem = new JMenuItem("📜 Lịch sử đấu giá của tôi");
+        JMenuItem historyItem = new JMenuItem(" Lịch sử đấu giá của tôi");
+        historyItem.setPreferredSize(new Dimension(280, 40));
+
+        historyItem.setFont(new Font("Helvetica", Font.PLAIN, 16));
         historyItem.addActionListener(e -> {
             // Gửi lệnh lấy lịch sử cá nhân lên server
-            // Lưu ý: out và gson phải được truyền vào constructor của UserProfileButton từ trước
             out.println(gson.toJson(new network.Request("GET_MY_HISTORY", this.username)));
         });
 
         // --- 5. Donate ---
         JMenuItem donateItem = new JMenuItem(" Donate cho Dev");
+        donateItem.setPreferredSize(new Dimension(280, 40));
+
+        donateItem.setFont(new Font("Helvetica", Font.PLAIN, 16));
         donateItem.setForeground(Color.MAGENTA);
         donateItem.addActionListener(e -> {
             try {
@@ -158,11 +173,17 @@ public class UserProfileButton extends JButton {
             }
         });
         // --- 6. Cài đặt ---
-        JMenuItem settingsItem = new JMenuItem("⚙️ Cài đặt");
+        JMenuItem settingsItem = new JMenuItem(" Cài đặt");
+        settingsItem.setPreferredSize(new Dimension(280, 40));
+
+        settingsItem.setFont(new Font("Helvetica", Font.PLAIN, 16));
         settingsItem.addActionListener(e -> JOptionPane.showMessageDialog(this, "Mở phần cài đặt..."));
 
         // --- 7. Đăng xuất ---
-        JMenuItem logoutItem = new JMenuItem("🚪 Đăng xuất");
+        JMenuItem logoutItem = new JMenuItem(" Đăng xuất");
+        logoutItem.setPreferredSize(new Dimension(280, 40));
+
+        logoutItem.setFont(new Font("Helvetica", Font.PLAIN, 16));
         logoutItem.setForeground(Color.RED);
         logoutItem.addActionListener(e -> {
             int confirm = JOptionPane.showConfirmDialog(this, "Bạn có chắc chắn muốn đăng xuất?", "Đăng xuất", JOptionPane.YES_NO_OPTION);
@@ -199,7 +220,7 @@ public class UserProfileButton extends JButton {
         this.balance = newBalance;
         String formattedMoney = String.format("%,.0f", this.balance);
         // Đổi lại chữ hiển thị trên Menu
-        balanceItem.setText("💰 Số dư: " + formattedMoney + " VNĐ");
+        balanceItem.setText(" Số dư: " + formattedMoney + " VNĐ");
 
     }
 

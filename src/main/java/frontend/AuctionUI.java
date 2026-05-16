@@ -10,8 +10,6 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.BufferedReader;
 import java.io.PrintWriter;
-import java.text.SimpleDateFormat;
-import java.util.Date;
 
 import client.ui.auction.UserProfileButton;
 
@@ -19,23 +17,17 @@ public class AuctionUI extends JFrame {
 
     private JTextField bidField;
     private JButton bidButton;
-
-    private JTextArea historyArea;
-    private JLabel timerLabel;
-
+    private JTextField searchField;
+    private AuctionPanel homePanel, artPanel, elecPanel, vehiclePanel, otherPanel;
     private PrintWriter out;
     private BufferedReader in;
     private Gson gson;
-
     private String userRole;
     private AuctionPanel auctionPanel;
-
     private String selectedItem = null;
-
     private UserProfileButton avatarButton;
 
     public AuctionUI(PrintWriter out, BufferedReader in, Gson gson, String role) {
-
         this.out = out;
         this.in = in;
         this.gson = gson;
@@ -47,257 +39,185 @@ public class AuctionUI extends JFrame {
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
         initUI();
-
         startListeningServer();
         this.setVisible(true);
 
-        // 🔥 FIX: request initial data SAU khi UI + listener ổn định
-        SwingUtilities.invokeLater(() -> {
-            requestInitialData();
-        });
+        SwingUtilities.invokeLater(this::requestInitialData);
     }
 
-    // =========================
-    // REQUEST INIT DATA
-    // =========================
     private void requestInitialData() {
-        out.println(gson.toJson(
-                new Request("GET_AUCTION", "")
-        ));
-        out.println(gson.toJson(
-                new Request("GET_BALANCE", userRole)
-        ));
+        out.println(gson.toJson(new Request("GET_AUCTION", "")));
+        out.println(gson.toJson(new Request("GET_BALANCE", userRole)));
     }
 
-    // =========================
-    // LISTEN SERVER
-    // =========================
     private void startListeningServer() {
-
         new Thread(() -> {
-
             try {
-
                 String msg;
-
                 while ((msg = in.readLine()) != null) {
-                    System.out.println(">>> Server response : " + msg);
-
                     Request res = gson.fromJson(msg, Request.class);
-
                     switch (res.getType()) {
-
                         case "UPDATE_AUCTION":
-
-                            SwingUtilities.invokeLater(() -> {
-                                updateAuctionInfo(res.getPayload());
-                            });
+                            SwingUtilities.invokeLater(() -> updateAuctionInfo(res.getPayload()));
                             break;
                         case "UPDATE_BALANCE":
                             SwingUtilities.invokeLater(() -> {
-                                // Lấy chuỗi tiền Server gửi, ép kiểu về số thập phân
                                 double balance = Double.parseDouble(res.getPayload());
-                                // Đưa tiền vào cái Avatar để nó tự đổi chữ "0.0" thành tiền thật
                                 avatarButton.updateBalance(balance);
                             });
                             break;
-
                         case "START_SESSION":
                             startNewSession("Phiên đấu giá bắt đầu!");
                             break;
-
                         case "END_SESSION":
                             auctionEnded("Phiên đấu giá kết thúc!");
-                            break;
-
-                        case "TIMER":
-                            updateTimer(Integer.parseInt(res.getPayload()));
                             break;
                         case "HISTORY_DATA":
                             SwingUtilities.invokeLater(() -> {
                                 setCursor(Cursor.getDefaultCursor());
-                                // Mở bảng lịch sử
-                                new client.ui.history.HistoryDialog(AuctionUI.this, res.getPayload()).setVisible(true);
+                                new HistoryDialog(AuctionUI.this, res.getPayload()).setVisible(true);
                             });
                             break;
                     }
                 }
-
             } catch (Exception e) {
                 System.out.println("Server disconnected");
             }
-
         }).start();
     }
 
-    // =========================
-    // INIT UI
-    // =========================
     private void initUI() {
+        //  Đổi nền thành Trắng tinh khôi (Không dùng ảnh nữa)
+        JPanel background = new JPanel(new BorderLayout());
+        background.setBackground(Color.WHITE);
 
-        JPanel background = new JPanel() {
-
-            Image bg = new ImageIcon(
-                    "src/main/java/frontend/background2.jpg"
-            ).getImage();
-
-            @Override
-            protected void paintComponent(Graphics g) {
-
-                super.paintComponent(g);
-
-                g.drawImage(bg, 0, 0, getWidth(), getHeight(), this);
-
-                g.setColor(new Color(0, 0, 0, 80));
-                g.fillRect(0, 0, getWidth(), getHeight());
-            }
-        };
-
-        background.setLayout(new BorderLayout());
-
-        // ========================= TOP =========================
-        JPanel topPanel = new JPanel(new BorderLayout());
-        topPanel.setOpaque(false);
-
-        JLabel title = new JLabel(" PHÒNG ĐẤU GIÁ REALTIME");
-        title.setFont(new Font("Segoe UI", Font.BOLD, 22));
-        title.setForeground(Color.WHITE);
-
-        timerLabel = new JLabel(" --s");
-        timerLabel.setFont(new Font("Segoe UI", Font.BOLD, 20));
-        timerLabel.setForeground(Color.YELLOW);
-
-        JButton historyButton = new JButton("📜 History");
-        historyButton.addActionListener(e -> {
-            // Ép con trỏ chuột của form hiện tại thành hình xoay xoay
-            AuctionUI.this.setCursor(Cursor.getPredefinedCursor(Cursor.WAIT_CURSOR));
-            // Gọi lệnh gửi đi (KHÔNG gõ chữ type: hay payload:)
-            out.println(gson.toJson(new Request("GET_HISTORY", "")));
-        });
-
-        // GỌI CÁI AVATAR TRÒN RA (Truyền tên user vào, tạm thời mình để cứng là userRole)
+        // ========================= TOP (Chỉ giữ Avatar) =========================
+        JPanel topPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 5));
+        topPanel.setBackground(Color.WHITE);
         avatarButton = new UserProfileButton("admin", out, gson);
+        topPanel.add(avatarButton);
 
-        // --- SẮP XẾP LẠI GÓC PHẢI TRÊN CÙNG ---
-        JPanel rightTop = new JPanel(new FlowLayout(FlowLayout.RIGHT, 15, 5)); // Thêm khoảng cách cho đẹp
-        rightTop.setOpaque(false);
+        // ========================= THANH TÌM KIẾM =========================
+        JPanel searchContainer = new JPanel(new FlowLayout(FlowLayout.CENTER));
+        searchContainer.setBackground(Color.WHITE);
 
-        rightTop.add(timerLabel);
-        rightTop.add(historyButton);
-        rightTop.add(avatarButton); //  Nhét Avatar vào cuối cùng
+        JLabel searchLabel = new JLabel(" Tìm kiếm: ");
+        searchLabel.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        searchLabel.setForeground(Color.BLACK); // Chữ đen
 
-        topPanel.add(title, BorderLayout.WEST);
-        topPanel.add(rightTop, BorderLayout.EAST);
-
-        // ========================= AUCTION PANEL =========================
-        auctionPanel = new AuctionPanel(item -> {
-            selectedItem = item;
-            bidButton.setEnabled(true);
+        searchField = new JTextField(30);
+        searchField.setFont(new Font("Segoe UI", Font.PLAIN, 15));
+        searchField.addKeyListener(new java.awt.event.KeyAdapter() {
+            public void keyReleased(java.awt.event.KeyEvent evt) {
+                out.println(gson.toJson(new Request("GET_AUCTION", "")));
+            }
         });
 
-        // ========================= HISTORY =========================
-        historyArea = new JTextArea();
-        historyArea.setEditable(false);
+        searchContainer.add(searchLabel);
+        searchContainer.add(searchField);
+
+        // ========================= CHIA TAB =========================
+        JTabbedPane tabbedPane = new JTabbedPane();
+        tabbedPane.setFont(new Font("Segoe UI", Font.BOLD, 16));
+        tabbedPane.setBackground(Color.WHITE);
+
+        homePanel = new AuctionPanel(item -> { selectedItem = item; bidButton.setEnabled(true); });
+        artPanel = new AuctionPanel(item -> { selectedItem = item; bidButton.setEnabled(true); });
+        elecPanel = new AuctionPanel(item -> { selectedItem = item; bidButton.setEnabled(true); });
+        vehiclePanel = new AuctionPanel(item -> { selectedItem = item; bidButton.setEnabled(true); });
+        otherPanel = new AuctionPanel(item -> { selectedItem = item; bidButton.setEnabled(true); });
+
+        tabbedPane.addTab(" Tất cả", homePanel);
+        tabbedPane.addTab(" Nghệ thuật", artPanel);
+        tabbedPane.addTab(" Điện tử", elecPanel);
+        tabbedPane.addTab(" Xe cộ", vehiclePanel);
+        tabbedPane.addTab(" Khác", otherPanel);
+
+        JPanel centerPanel = new JPanel(new BorderLayout());
+        centerPanel.setBackground(Color.WHITE);
+        centerPanel.add(searchContainer, BorderLayout.NORTH);
+        centerPanel.add(tabbedPane, BorderLayout.CENTER);
 
         // ========================= BOTTOM =========================
         JPanel bottomPanel = new JPanel();
-        bottomPanel.setOpaque(false);
-
-        JButton startButton = new JButton("Bắt đầu");
-
-        if ("ADMIN".equals(userRole)) {
-            bottomPanel.add(startButton);
-        }
-
-        startButton.addActionListener(e ->
-                out.println(gson.toJson(new Request("START_SESSION", "")))
-        );
+        bottomPanel.setBackground(Color.WHITE);
 
         JLabel label = new JLabel("Nhập giá:");
-        label.setForeground(Color.WHITE);
-
-        bidField = new JTextField(10);
+        label.setForeground(Color.BLACK); // Chữ đen
+        bidField = new JTextField(15);
 
         bidButton = new JButton("Đặt giá");
         bidButton.setEnabled(false);
+        bidButton.addActionListener(e -> placeBid());
 
         JButton uploadBtn = new JButton("Đăng sản phẩm");
-
-        uploadBtn.addActionListener(e ->
-                new UploadDialog(this, out, gson).setVisible(true)
-        );
+        uploadBtn.addActionListener(e -> new UploadDialog(this, out, gson).setVisible(true));
 
         bottomPanel.add(label);
         bottomPanel.add(bidField);
         bottomPanel.add(bidButton);
         bottomPanel.add(uploadBtn);
 
-        bidButton.addActionListener(e -> placeBid());
-
         // ========================= ADD MAIN =========================
         background.add(topPanel, BorderLayout.NORTH);
-        background.add(auctionPanel, BorderLayout.CENTER);
+        background.add(centerPanel, BorderLayout.CENTER);
         background.add(bottomPanel, BorderLayout.SOUTH);
 
         setContentPane(background);
     }
 
-    // ========================= HISTORY POPUP =========================
-    private void showHistoryPopup() {
-        new HistoryDialog(this, historyArea.getText()).setVisible(true);
-    }
-
-    // ========================= BID =========================
     private void placeBid() {
-
         if (selectedItem == null) {
             JOptionPane.showMessageDialog(this, "Chọn sản phẩm trước!");
             return;
         }
-
         try {
-
             int price = Integer.parseInt(bidField.getText());
-
-            //  Đã fix: Lấy thẳng tên user (role) từ Avatar để gửi lên
             String currentUser = avatarButton.getUsername();
-
-            String payload = String.format(
-                    "{\"item\":\"%s\",\"price\":%d, \"username\":\"%s\"}",
-                    selectedItem,
-                    price,
-                    currentUser
-            );
-
-            out.println(gson.toJson(
-                    new Request("PLACE_BID", payload)
-            ));
-
+            String payload = String.format("{\"item\":\"%s\",\"price\":%d, \"username\":\"%s\"}", selectedItem, price, currentUser);
+            out.println(gson.toJson(new Request("PLACE_BID", payload)));
         } catch (Exception ex) {
             JOptionPane.showMessageDialog(this, "Giá không hợp lệ!");
         }
     }
-    // ========================= UPDATE =========================
+
     public void updateAuctionInfo(String data) {
         if (data == null || data.replace(" ", "").isEmpty()) {
+            homePanel.loadItems(""); artPanel.loadItems(""); elecPanel.loadItems("");
+            vehiclePanel.loadItems(""); otherPanel.loadItems("");
             return;
         }
-        auctionPanel.loadItems(data);
+
+        String keyword = searchField.getText().toLowerCase().trim();
+        StringBuilder homeData = new StringBuilder(), artData = new StringBuilder(), elecData = new StringBuilder(), vehicleData = new StringBuilder(), otherData = new StringBuilder();
+
+        for (String item : data.split(";")) {
+            if (item.trim().isEmpty()) continue;
+            String name = item.split("\\|", -1)[0];
+
+            if (!keyword.isEmpty() && !name.toLowerCase().contains(keyword)) continue;
+
+            String category = "Khác", lowerName = name.toLowerCase();
+            if (lowerName.contains("tranh") || lowerName.contains("tượng")) category = "Nghệ thuật";
+            else if (lowerName.contains("laptop") || lowerName.contains("phone") || lowerName.contains("phím")) category = "Điện tử";
+            else if (lowerName.contains("xe") || lowerName.contains("car") || lowerName.contains("bus")) category = "Xe cộ";
+
+            homeData.append(item).append(";");
+            switch (category) {
+                case "Nghệ thuật": artData.append(item).append(";"); break;
+                case "Điện tử": elecData.append(item).append(";"); break;
+                case "Xe cộ": vehicleData.append(item).append(";"); break;
+                default: otherData.append(item).append(";"); break;
+            }
+        }
+
+        homePanel.loadItems(homeData.toString());
+        artPanel.loadItems(artData.toString());
+        elecPanel.loadItems(elecData.toString());
+        vehiclePanel.loadItems(vehicleData.toString());
+        otherPanel.loadItems(otherData.toString());
     }
 
-    // ========================= HISTORY =========================
-    private void addHistory(String item, String price, String user) {
-
-        String time = new SimpleDateFormat("HH:mm:ss").format(new Date());
-
-        historyArea.append(
-                String.format("[%s] %s → %s VNĐ (%s)\n",
-                        time, item, price, user
-                )
-        );
-    }
-
-    // ========================= SESSION =========================
     public void startNewSession(String message) {
         bidButton.setEnabled(true);
         bidField.setText("");
@@ -305,18 +225,9 @@ public class AuctionUI extends JFrame {
     }
 
     public void auctionEnded(String message) {
-
         SwingUtilities.invokeLater(() -> {
-            timerLabel.setText(" KẾT THÚC");
             bidButton.setEnabled(false);
             JOptionPane.showMessageDialog(this, message);
-        });
-    }
-
-    public void updateTimer(int time) {
-
-        SwingUtilities.invokeLater(() -> {
-            timerLabel.setText(time > 0 ? " " + time + "s" : " KẾT THÚC");
         });
     }
 }
