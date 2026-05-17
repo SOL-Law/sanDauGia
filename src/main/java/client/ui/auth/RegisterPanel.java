@@ -17,7 +17,8 @@ public class RegisterPanel extends JPanel {
         setOpaque(false);
 
         GlassPanel form = new GlassPanel();
-        form.setPreferredSize(new Dimension(400, 350));
+        // Tăng chiều cao form lên một chút (từ 350 lên 420) để chứa thêm ô chọn quyền
+        form.setPreferredSize(new Dimension(400, 420));
         form.setLayout(new GridBagLayout());
 
         GridBagConstraints c = new GridBagConstraints();
@@ -46,6 +47,17 @@ public class RegisterPanel extends JPanel {
         c.gridy = 2;
         form.add(pass, c);
 
+        // THÊM HỘP CHỌN VAI TRÒ (BIDDER / SELLER)
+        String[] roles = {"BIDDER", "SELLER"};
+        JComboBox<String> roleCombo = new JComboBox<>(roles);
+        roleCombo.setPreferredSize(new Dimension(300, 40));
+        roleCombo.setBackground(new Color(30, 30, 30)); // Cùng tone màu với ô Pass
+        roleCombo.setForeground(Color.WHITE);
+        roleCombo.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+
+        c.gridy = 3; // Đẩy xuống hàng thứ 3
+        form.add(roleCombo, c);
+
         JButton registerBtn = new RippleButton("CREATE");
 
         registerBtn.addActionListener(e -> {
@@ -53,21 +65,25 @@ public class RegisterPanel extends JPanel {
             String username = user.getText().trim();
             String password = new String(pass.getPassword());
 
+            // Lấy chức vụ mà người dùng vừa chọn
+            String role = (String) roleCombo.getSelectedItem();
+
             if (username.isEmpty() || password.isEmpty()) {
                 JOptionPane.showMessageDialog(this, "Nhập đầy đủ thông tin!");
                 return;
             }
 
+            //  CẬP NHẬT PAYLOAD: Nhét thêm cái role vào chuỗi JSON
             String payload = String.format(
-                    "{\"username\":\"%s\",\"password\":\"%s\"}",
-                    username, password
+                    "{\"username\":\"%s\",\"password\":\"%s\",\"role\":\"%s\"}",
+                    username, password, role
             );
 
             Request req = new Request("REGISTER", payload);
             out.println(gson.toJson(req));
         });
 
-        c.gridy = 3;
+        c.gridy = 4; // Đẩy nút CREATE xuống hàng thứ 4
         form.add(registerBtn, c);
 
         JButton switchBtn = new JButton("Back to login");
@@ -77,7 +93,7 @@ public class RegisterPanel extends JPanel {
 
         switchBtn.addActionListener(e -> frame.showLogin());
 
-        c.gridy = 4;
+        c.gridy = 5; // Đẩy nút Back xuống hàng thứ 5
         form.add(switchBtn, c);
 
         add(form);

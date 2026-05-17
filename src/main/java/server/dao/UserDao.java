@@ -24,8 +24,8 @@ public class UserDao {
             if (rs.next()) {
                 String role = rs.getString("role");
 
-                System.out.println("🗄️ Login OK: " + username + " | Role: " + role);
-                return role; // 🔥 trả role
+                System.out.println("️ Login OK: " + username + " | Role: " + role);
+                return role; //  trả role
             }
 
         } catch (Exception e) {
@@ -38,32 +38,32 @@ public class UserDao {
     // ==========================================
     // REGISTER
     // ==========================================
-    public static boolean register(String username, String password) {
-        try (Connection conn = DBConnection.getConnection()) {
+    public static boolean register(String username, String password, String role) {
+        try (java.sql.Connection conn = server.util.DBConnection.getConnection()) {
 
             // check trùng username
             String checkSql = "SELECT * FROM users WHERE username = ?";
-            PreparedStatement checkStmt = conn.prepareStatement(checkSql);
+            java.sql.PreparedStatement checkStmt = conn.prepareStatement(checkSql);
             checkStmt.setString(1, username);
 
-            ResultSet rs = checkStmt.executeQuery();
+            java.sql.ResultSet rs = checkStmt.executeQuery();
 
             if (rs.next()) {
                 return false;
             }
 
-            // insert user (role mặc định BIDDER)
+            // insert user với role được người dùng chọn
             String insertSql = "INSERT INTO users (username, password, role) VALUES (?, ?, ?)";
-            PreparedStatement insertStmt = conn.prepareStatement(insertSql);
+            java.sql.PreparedStatement insertStmt = conn.prepareStatement(insertSql);
 
             insertStmt.setString(1, username);
             insertStmt.setString(2, password);
-            insertStmt.setString(3, "BIDDER"); // mặc định
+            insertStmt.setString(3, role);
 
             int rows = insertStmt.executeUpdate();
 
             if (rows > 0) {
-                System.out.println("🗄️ Tạo user: " + username);
+                System.out.println("🗄 Tạo user: " + username + " | Quyền: " + role);
                 return true;
             }
 
@@ -126,6 +126,67 @@ public class UserDao {
             stmt.setString(2, username);
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
+            return false;
+        }
+    }
+    // ==========================================
+    // LẤY ID TÀI KHOẢN TỪ DATABASE
+    // ==========================================
+    public static String getUserId(String username) {
+        try (java.sql.Connection conn = server.util.DBConnection.getConnection()) {
+            String sql = "SELECT id FROM users WHERE username = ?";
+            java.sql.PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, username);
+            java.sql.ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                return String.valueOf(rs.getInt("id"));
+            }
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return "N/A";
+    }
+
+    // ==========================================
+    // CẬP NHẬT TÊN VÀ MẬT KHẨU (ĐỒNG BỘ MỌI BẢNG)
+    // ==========================================
+    public static boolean updateProfile(String oldUser, String newUser, String newPass) {
+        try (java.sql.Connection conn = server.util.DBConnection.getConnection()) {
+            conn.setAutoCommit(false); // Bật chế độ Cập nhật đồng loạt (Tránh lỗi đứt gánh giữa chừng)
+
+            // 1. Cập nhật bảng Users (Đổi pass nếu có nhập)
+            String sql1 = newPass.isEmpty()
+                    ? "UPDATE users SET username = ? WHERE username = ?"
+                    : "UPDATE users SET username = ?, password = ? WHERE username = ?";
+            java.sql.PreparedStatement stmt1 = conn.prepareStatement(sql1);
+            stmt1.setString(1, newUser);
+            if(newPass.isEmpty()) {
+                stmt1.setString(2, oldUser);
+            } else {
+                stmt1.setString(2, newPass);
+                stmt1.setString(3, oldUser);
+            }
+            stmt1.executeUpdate();
+
+            // 2. Nếu thực sự có đổi Tên, phải đổi luôn tên ở các bảng khác để không bị lỗi lịch sử
+            if (!oldUser.equals(newUser)) {
+                // Đổi tên người dẫn đầu
+                java.sql.PreparedStatement s2 = conn.prepareStatement("UPDATE items SET highest_bidder = ? WHERE highest_bidder = ?");
+                s2.setString(1, newUser); s2.setString(2, oldUser); s2.executeUpdate();
+
+                // Đổi tên người đăng bán
+                java.sql.PreparedStatement s3 = conn.prepareStatement("UPDATE items SET seller_name = ? WHERE seller_name = ?");
+                s3.setString(1, newUser); s3.setString(2, oldUser); s3.executeUpdate();
+
+                // Đổi tên lịch sử đặt giá
+                java.sql.PreparedStatement s4 = conn.prepareStatement("UPDATE bids SET username = ? WHERE username = ?");
+                s4.setString(1, newUser); s4.setString(2, oldUser); s4.executeUpdate();
+            }
+
+            conn.commit(); // Chốt lưu tất cả!
+            return true;
+        } catch (Exception e) {
+            System.out.println("Lỗi cập nhật Profile: " + e.getMessage());
             return false;
         }
     }

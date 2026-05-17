@@ -33,19 +33,53 @@ public class AuctionManager {
         return instance;
     }
 
-    // =========================
-    // ADD ITEM (UPLOAD)
-    // =========================
-    public synchronized void addItem(String name, int startPrice, String base64Image, int duration) {
+    // ==========================================
+    // 1. ADD ITEM (UPLOAD TỪ CLIENT GỬI LÊN)
+    // ==========================================
+    public synchronized void addItem(String name, int startPrice, String base64Image, int duration, String seller, String category) {
         int newId = idCounter.incrementAndGet();
-        items.put(newId, new BidInfo(name, startPrice, "None", base64Image, duration));
-        System.out.println(" ADD ITEM: " + name + " | " + startPrice + " | Timer: " + duration + "s");
+        long startTime = System.currentTimeMillis(); // Lấy mốc thời gian ngay lúc đăng
+
+        // 🔥 Truyền chuẩn xác và đầy đủ 8 tham số vào BidInfo
+        items.put(newId, new BidInfo(name, startPrice, "None", base64Image, startTime, duration, seller, category));
+
+        System.out.println(" ADD ITEM: " + name + " | Giá: " + startPrice + " | Bán bởi: " + seller);
     }
 
-    // Hàm nạp từ DB lúc bật Server (Mặc định 60s để tương thích với code cũ)
+    // ==========================================
+    // 2. NẠP TỪ DATABASE LÚC BẬT SERVER (Hàm dự phòng để code cũ không bị lỗi)
+    // ==========================================
     public synchronized void addItem(String name, int startPrice, String base64Image) {
-        addItem(name, startPrice, base64Image, 60);
+        int newId = idCounter.incrementAndGet();
+        long startTime = System.currentTimeMillis();
+
+        // Nếu load từ DB cũ lên thì cho mặc định 60s, người bán 'admin', mục 'Khác'
+        items.put(newId, new BidInfo(name, startPrice, "None", base64Image, startTime, 60, "admin", "Khác"));
     }
+
+    // ==========================================
+    // 3. GET ALL ITEMS (Đã fix lỗi getRemainingTime)
+    // ==========================================
+    public synchronized String getAllItems() {
+        StringBuilder sb = new StringBuilder();
+        for (BidInfo bid : items.values()) {
+
+            //  Sửa thành getDuration()
+            long elapsedSeconds = (System.currentTimeMillis() - bid.getStartTime()) / 1000;
+            long timeLeft = Math.max(0, bid.getDuration() - elapsedSeconds);
+
+            // Nối thêm seller và category vào chuỗi bằng dấu |
+            sb.append(bid.getItem()).append("|")
+                    .append(bid.getCurrentPrice()).append("|")
+                    .append(bid.getLeader()).append("|")
+                    .append(bid.getBase64Image()).append("|")
+                    .append(timeLeft).append("|")
+                    .append(bid.getSeller()).append("|")
+                    .append(bid.getCategory()).append(";");
+        }
+        return sb.toString();
+    }
+
 
     // =========================
     // HÀM 1: Bắt đầu đếm ngược (Gọi lúc đăng sản phẩm)
@@ -135,20 +169,6 @@ public class AuctionManager {
         return false;
     }
 
-    // =========================
-    // GET ALL ITEMS (CLIENT UI)
-    // =========================
-    public synchronized String getAllItems() {
-        StringBuilder sb = new StringBuilder();
-        for (BidInfo b : items.values()) {
-            sb.append(b.getItem()).append("|")
-                    .append(b.getCurrentPrice()).append("|")
-                    .append(b.getLeader()).append("|")
-                    .append(b.getBase64Image()).append("|")
-                    .append(b.getRemainingTime()).append(";"); // Nối thêm thời gian vào đuôi
-        }
-        return sb.toString();
-    }
 
     // =========================
     // DEBUG PRINT
@@ -158,5 +178,42 @@ public class AuctionManager {
         for (BidInfo bid : items.values()) {
             System.out.println(bid.getItem() + " | " + bid.getCurrentPrice() + " | " + bid.getLeader());
         }
+    }
+    // =========================================
+    // XÓA SẢN PHẨM KHỎI HỆ THỐNG
+    // =========================================
+    public synchronized void deleteItemFromSystem(String itemName) {
+        // 1. Xóa khỏi RAM Server
+        items.values().removeIf(it -> it.getItem().equals(itemName));
+        // 2. Xóa khỏi Database
+        server.dao.ItemDao.deleteItem(itemName);
+        // 3. Phát loa cập nhật cho tất cả các máy Client
+        String data = this.getAllItems();
+        server.AuctionServer.broadcast(new com.google.gson.Gson().toJson(new network.Request("UPDATE_AUCTION", data)));
+    }
+
+    // =========================================
+    // SỬA SẢN PHẨM TRÊN HỆ THỐNG
+    // =========================================
+    public synchronized void editItemInSystem(String oldName, String newName, int startPrice) {
+        // 1. Sửa trên RAM Server
+        // Vì items dùng ID (Integer) làm Key, ta dùng vòng lặp để tìm món đồ theo tên cũ
+        for (java.util.Map.Entry<Integer, BidInfo> entry : items.entrySet()) {
+            BidInfo bid = entry.getValue();
+
+            if (bid.getItem().equals(oldName)) {
+                bid.setItem(newName);             // Cập nhật tên mới
+                bid.setCurrentPrice(startPrice);  // Cập nhật giá khởi điểm mới
+                bid.setLeader("None");            // Reset người dẫn đầu
+                break; // Tìm thấy và sửa xong thì thoát vòng lặp ngay
+            }
+        }
+
+        // 2. Sửa dưới Database
+        server.dao.ItemDao.updateItemDetails(oldName, newName, startPrice);
+
+        // 3. Phát loa cập nhật cho tất cả Client
+        String data = this.getAllItems();
+        server.AuctionServer.broadcast(new com.google.gson.Gson().toJson(new network.Request("UPDATE_AUCTION", data)));
     }
 }
