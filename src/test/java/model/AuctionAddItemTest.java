@@ -12,19 +12,18 @@ public class AuctionAddItemTest {
         AuctionManager manager =
                 AuctionManager.getInstance();
 
-        String before =
-                manager.getAllItems();
-
         manager.addItem(
-                "Tablet",
-                3000,
+                "Camera",
+                1000,
                 "",
-                60
+                60,
+                "Điện tử",
+                "Canon"
         );
 
-        String after =
+        String data =
                 manager.getAllItems();
 
-        assertNotEquals(before, after);
+        assertTrue(data.contains("Camera"));
     }
 }

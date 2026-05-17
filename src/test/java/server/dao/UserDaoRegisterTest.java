@@ -9,12 +9,16 @@ public class UserDaoRegisterTest {
     @Test
     void testRegister() {
 
+        String username =
+                "user_test_" + System.currentTimeMillis();
+
         boolean result =
                 UserDao.register(
-                        "user_test_999",
-                        "123456"
+                        username,
+                        "123456",
+                        "USER"
                 );
 
-        assertTrue(result || !result);
+        assertTrue(result);
     }
 }

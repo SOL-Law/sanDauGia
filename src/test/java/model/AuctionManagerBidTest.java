@@ -16,7 +16,9 @@ public class AuctionManagerBidTest {
                 "iPad",
                 10000000,
                 "",
-                60
+                60,
+                "Máy tính bảng Apple",
+                "Apple"
         );
 
         boolean result =

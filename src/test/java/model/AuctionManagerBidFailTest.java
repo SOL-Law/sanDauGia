@@ -16,7 +16,9 @@ public class AuctionManagerBidFailTest {
                 "Samsung S24",
                 15000000,
                 "",
-                60
+                60,
+                "Điện thoại Samsung",
+                "Samsung"
         );
 
         boolean result =
