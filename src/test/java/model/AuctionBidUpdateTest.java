@@ -16,7 +16,9 @@ public class AuctionBidUpdateTest {
                 "Camera",
                 1000,
                 "",
-                60
+                60,
+                "Điện tử",
+                "Sony"
         );
 
         boolean result =

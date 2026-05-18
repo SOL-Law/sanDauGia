@@ -7,23 +7,23 @@ import static org.junit.jupiter.api.Assertions.*;
 public class AuctionManagerAddItemTest {
 
     @Test
-    void testAddItem() {
+    void testAddNewItem() {
 
         AuctionManager manager =
                 AuctionManager.getInstance();
 
         manager.addItem(
-                "Laptop Gaming",
-                20000000,
+                "Laptop",
+                1500,
                 "",
-                60
+                60,
+                "Laptop gaming",
+                "Asus"
         );
 
-        String items =
+        String data =
                 manager.getAllItems();
 
-        assertTrue(
-                items.contains("Laptop Gaming")
-        );
+        assertTrue(data.contains("Laptop"));
     }
 }

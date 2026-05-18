@@ -16,14 +16,18 @@ public class AuctionMultipleItemsTest {
                 "A",
                 100,
                 "",
-                60
+                60,
+                "Khác",
+                "None"
         );
 
         manager.addItem(
                 "B",
                 200,
                 "",
-                60
+                60,
+                "Khác",
+                "None"
         );
 
         String data =

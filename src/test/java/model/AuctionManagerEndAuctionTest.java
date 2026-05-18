@@ -16,7 +16,9 @@ public class AuctionManagerEndAuctionTest {
                 "Tai nghe",
                 2000000,
                 "",
-                60
+                60,
+                "Tai nghe Bluetooth",
+                "Sony"
         );
 
         manager.endAuction("Tai nghe");

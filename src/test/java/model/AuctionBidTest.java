@@ -16,7 +16,9 @@ public class AuctionBidTest {
                 "Laptop",
                 1000,
                 "",
-                60
+                60,
+                "Laptop gaming",
+                "Asus"
         );
 
         boolean result =
@@ -39,7 +41,9 @@ public class AuctionBidTest {
                 "Phone",
                 5000,
                 "",
-                60
+                60,
+                "Điện thoại",
+                "Samsung"
         );
 
         boolean result =
