@@ -28,17 +28,19 @@ public class AuctionUI extends JFrame {
     private client.ui.auction.PriceChartDialog chartDialog;
     private java.util.Map<String, String> itemOwners = new java.util.HashMap<>();
     private JLabel idVal;
+    private String myUsername;
 
     //  BIẾN TOÀN CỤC ĐỂ ĐIỀU HƯỚNG CHUYỂN TRANG
     private JPanel cardPanel;
     private JLabel breadcrumbLabel;
     private JButton categoryBtn;
 
-    public AuctionUI(PrintWriter out, BufferedReader in, Gson gson, String role) {
+    public AuctionUI(PrintWriter out, BufferedReader in, Gson gson, String role , String username) {
         this.out = out;
         this.in = in;
         this.gson = gson;
         this.userRole = role;
+        this.myUsername = username;
 
         setTitle("PHÒNG ĐẤU GIÁ REALTIME - Quyền: " + role);
         setSize(1100, 700);
@@ -264,7 +266,8 @@ public class AuctionUI extends JFrame {
         searchContainer.add(searchField);
 
         //  TRUYỀN CHÍNH THỨC ĐỊA CHỈ THẰNG AUCTIONUI NÀY CHO AVATAR BUTTON ĐỂ ĐIỀU HƯỚNG
-        avatarButton = new UserProfileButton(this, "admin", out, gson);
+        avatarButton = new UserProfileButton(this, this.myUsername, out, gson);
+
         JPanel rightTop = new JPanel(new FlowLayout(FlowLayout.RIGHT, 0, 0));
         rightTop.setBackground(Color.WHITE);
         rightTop.add(avatarButton);

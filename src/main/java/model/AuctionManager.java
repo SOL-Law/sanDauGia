@@ -94,14 +94,14 @@ public class AuctionManager {
     }
 
     // =========================
-    // HÀM 2: Gõ búa kết thúc (ĐÃ FIX LỖI GỘP CHUNG)
+    // HÀM 2: Gõ búa kết thúc
     // =========================
     public synchronized void endAuction(String itemName) {
         System.out.println("--- KẾT THÚC ĐẤU GIÁ: " + itemName + " ---");
 
         // 1. Tìm món đồ trong RAM
         model.BidInfo targetItem = null;
-        Integer targetKey = null; // Cần giữ lại chìa khóa (Key) để lát nữa xóa đồ
+        Integer targetKey = null;
 
         for (Map.Entry<Integer, BidInfo> entry : items.entrySet()) {
             if (entry.getValue().getItem().equals(itemName)) {
@@ -111,43 +111,33 @@ public class AuctionManager {
             }
         }
 
-        if (targetItem == null) return; // Không thấy thì thôi
+        if (targetItem == null) return;
 
         String winner = targetItem.getLeader();
-        int finalPrice = targetItem.getCurrentPrice();
 
         try {
-            // 2. Chốt sổ trên Database: Cập nhật thành FINISHED
-            server.dao.ItemDao.updateItemStatus(itemName, "FINISHED");
 
-            // 3. Trừ tiền người thắng (Nếu có người mua)
-            if (!winner.equals("None")) {
-                server.dao.UserDao.payForItem(winner, finalPrice);
-                System.out.println(" Đã bán [" + itemName + "] cho " + winner + " giá " + finalPrice);
-            } else {
-                System.out.println(" [" + itemName + "] không ai mua!");
-            }
+            server.dao.ItemDao.endAuctionAndSettlePayment(itemName);
 
         } catch (Exception e) {
-            System.out.println(" Lỗi khi xử lý Database (nhưng vẫn sẽ xóa đồ): " + e.getMessage());
+            System.out.println(" Lỗi khi xử lý Database: " + e.getMessage());
         } finally {
-            // 4. LUÔN LUÔN XÓA ĐỒ KHỎI RAM (Dù Database có lỗi hay không)
+            // LUÔN LUÔN XÓA ĐỒ KHỎI RAM (Dù Database có lỗi hay không)
             if (targetKey != null) {
                 items.remove(targetKey);
             }
 
-            // 5. Loan báo cho toàn bộ Client biết để gỡ tranh xuống
+            // Loan báo cho toàn bộ Client biết để gỡ tranh xuống
             com.google.gson.Gson gson = new com.google.gson.Gson();
             String data = this.getAllItems();
             String jsonMessage = gson.toJson(new network.Request("UPDATE_AUCTION", data));
             server.AuctionServer.broadcast(jsonMessage);
 
-            // 6. (Tùy chọn) Gửi thông báo Pop-up cho cả làng biết ai thắng
+            // Gửi thông báo Pop-up cho cả làng biết
             String msg = "Phiên đấu giá [" + itemName + "] đã kết thúc! Người thắng: " + winner;
             server.AuctionServer.broadcast(gson.toJson(new network.Request("NOTIFY", msg)));
         }
     }
-
     // =========================
     // PLACE BID
     // =========================

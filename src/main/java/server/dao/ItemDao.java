@@ -7,7 +7,7 @@ import java.sql.ResultSet;
 public class ItemDao {
 
     // ==========================================
-    // 1. LƯU SẢN PHẨM MỚI (🔥 ĐÃ THÊM NGƯỜI BÁN)
+    // 1. LƯU SẢN PHẨM MỚI ( ĐÃ THÊM NGƯỜI BÁN)
     // ==========================================
     // Đã thêm sellerName và category
     public static boolean insertItem(String name, int startPrice, String imageBase64, String sellerName, String category) {
@@ -31,7 +31,8 @@ public class ItemDao {
     // ==========================================
     public static void loadAllItemsToManager() {
         try (Connection conn = server.util.DBConnection.getConnection()) {
-            String sql = "SELECT name, current_price, image_base64 FROM items WHERE status = 'ACTIVE'";
+            // BƯỚC 1: Sửa câu SQL, móc thêm 2 cột mới (seller_name, category) từ DB lên
+            String sql = "SELECT name, current_price, image_base64, seller_name, category FROM items WHERE status = 'ACTIVE'";
             PreparedStatement stmt = conn.prepareStatement(sql);
             ResultSet rs = stmt.executeQuery();
 
@@ -43,16 +44,24 @@ public class ItemDao {
                 int price = rs.getInt("current_price");
                 String image = rs.getString("image_base64");
 
-                manager.addItem(name, price, image);
+                // BƯỚC 2: Hứng dữ liệu vào biến
+                String seller = rs.getString("seller_name");
+                String category = rs.getString("category");
+
+                // BƯỚC 3: Dùng hàm addItem loại XỊN (đủ 6 tham số), mặc định cho 60 giây
+                manager.addItem(name, price, image, 60, seller, category);
+
+                //  BƯỚC 4: Rất quan trọng - Kích hoạt đồng hồ đếm lùi cho món đồ này
+                manager.startAuctionTimer(name, 60);
+
                 count++;
             }
-            System.out.println("✅ Đã tải thành công " + count + " sản phẩm từ Database lên Server!");
+            System.out.println(" Đã tải thành công " + count + " sản phẩm từ Database lên Server!");
 
         } catch (Exception e) {
             System.out.println("Lỗi tải danh sách sản phẩm: " + e.getMessage());
         }
     }
-
     // ==========================================
     // 3. KẾT THÚC PHIÊN VÀ CHUYỂN TIỀN (TRỪ MUA, CỘNG BÁN)
     // ==========================================
@@ -89,7 +98,7 @@ public class ItemDao {
                         stmtAdd.executeUpdate();
                     }
 
-                    System.out.println("💰 Thanh toán thành công: [" + winner + "] đã trả " + price + " cho [" + seller + "]");
+                    System.out.println(" Thanh toán thành công: [" + winner + "] đã trả " + price + " cho [" + seller + "]");
 
                     // Chuyển trạng thái món đồ thành ĐÃ THANH TOÁN (PAID)
                     String sqlStatus = "UPDATE items SET status = 'PAID' WHERE name = ?";
