@@ -10,7 +10,7 @@ import java.util.concurrent.TimeUnit;
 public class AuctionManager {
     // Công cụ hẹn giờ siêu chuẩn của Java
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
-
+    private final Map<String, java.util.concurrent.ScheduledFuture<?>> auctionTimers = new ConcurrentHashMap<>();
     private static AuctionManager instance;
 
     // thread-safe storage: Lưu trữ đồ vật đang đấu giá
@@ -84,13 +84,22 @@ public class AuctionManager {
     // =========================
     // HÀM 1: Bắt đầu đếm ngược (Gọi lúc đăng sản phẩm)
     // =========================
+    // =========================
+    // HÀM 1: Bắt đầu đếm ngược (Đã sửa lỗi Thread-safe)
+    // =========================
     public void startAuctionTimer(String itemName, int durationInSeconds) {
-        System.out.println(" Đã lên lịch kết thúc [" + itemName + "] sau " + durationInSeconds + " giây.");
+        // Lấy và xóa thẳng timer cũ ra một cách an toàn, tránh NullPointerException
+        java.util.concurrent.ScheduledFuture<?> oldTimer = auctionTimers.remove(itemName);
+        if (oldTimer != null) {
+            oldTimer.cancel(false); // Hủy luồng cũ thành công
+        }
 
-        // Hẹn giờ: Đúng X giây sau, chạy hàm endAuction()
-        scheduler.schedule(() -> {
+        var future = scheduler.schedule(() -> {
             endAuction(itemName);
+            auctionTimers.remove(itemName);
         }, durationInSeconds, TimeUnit.SECONDS);
+
+        auctionTimers.put(itemName, future);
     }
 
     // =========================
@@ -149,6 +158,20 @@ public class AuctionManager {
                     bid.setLeader(user);
 
                     System.out.println(" BID SUCCESS: " + itemName + " -> " + price + " (" + user + ")");
+                    // Thêm đoạn này vào bên trong block "if (price > bid.getCurrentPrice())" trước khi return true:
+                    long elapsedSeconds = (System.currentTimeMillis() - bid.getStartTime()) / 1000;
+                    long timeLeft = bid.getDuration() - elapsedSeconds;
+
+                    if (timeLeft <= 30) { // 1. Nếu thời gian còn lại dưới hoặc bằng 30 giây
+                        // 2. Đặt tổng thời gian mới = thời gian đã trôi qua + 60 giây (đồng nghĩa với việc còn đúng 60 giây nữa mới hết giờ)
+                        int newDuration = (int) (elapsedSeconds + 60);
+                        bid.setDuration(newDuration);
+
+                        // 3. Hủy timer cũ và lên lịch lại đúng 60 giây (1 phút) nữa mới đóng phiên
+                        startAuctionTimer(itemName, 60);
+
+                        System.out.println("🔥 ANTI-SNIPING TRIGGERED: Phiên đấu giá [" + itemName + "] được kéo dài thêm 1 phút!");
+                    }
                     return true;
                 }
                 System.out.println(" BID FAIL (price too low)");
@@ -172,9 +195,19 @@ public class AuctionManager {
     // =========================================
     // XÓA SẢN PHẨM KHỎI HỆ THỐNG
     // =========================================
+    // =========================================
+    // XÓA SẢN PHẨM KHỎI HỆ THỐNG (Đã bổ sung hủy Timer)
+    // =========================================
     public synchronized void deleteItemFromSystem(String itemName) {
         // 1. Xóa khỏi RAM Server
         items.values().removeIf(it -> it.getItem().equals(itemName));
+
+        // 🔥 HỦY LUÔN TIMER ĐANG CHẠY NGẦM CỦA MÓN ĐỒ NÀY
+        java.util.concurrent.ScheduledFuture<?> oldTimer = auctionTimers.remove(itemName);
+        if (oldTimer != null) {
+            oldTimer.cancel(false);
+        }
+
         // 2. Xóa khỏi Database
         server.dao.ItemDao.deleteItem(itemName);
         // 3. Phát loa cập nhật cho tất cả các máy Client
@@ -185,9 +218,12 @@ public class AuctionManager {
     // =========================================
     // SỬA SẢN PHẨM TRÊN HỆ THỐNG
     // =========================================
+    // =========================================
+    // SỬA SẢN PHẨM TRÊN HỆ THỐNG (Đã sửa lỗi kẹt phiên đấu giá)
+    // =========================================
     public synchronized void editItemInSystem(String oldName, String newName, int startPrice) {
         // 1. Sửa trên RAM Server
-        // Vì items dùng ID (Integer) làm Key, ta dùng vòng lặp để tìm món đồ theo tên cũ
+        BidInfo targetBid = null;
         for (java.util.Map.Entry<Integer, BidInfo> entry : items.entrySet()) {
             BidInfo bid = entry.getValue();
 
@@ -195,8 +231,24 @@ public class AuctionManager {
                 bid.setItem(newName);             // Cập nhật tên mới
                 bid.setCurrentPrice(startPrice);  // Cập nhật giá khởi điểm mới
                 bid.setLeader("None");            // Reset người dẫn đầu
-                break; // Tìm thấy và sửa xong thì thoát vòng lặp ngay
+                targetBid = bid;                  // Lưu vết món đồ vừa sửa để cập nhật Timer
+                break;
             }
+        }
+
+        // 🔥 ĐỒNG BỘ LẠI TIMER SANG TÊN MỚI
+        if (targetBid != null) {
+            // Hủy timer mang tên cũ
+            java.util.concurrent.ScheduledFuture<?> oldTimer = auctionTimers.remove(oldName);
+            if (oldTimer != null) {
+                oldTimer.cancel(false);
+            }
+            // Tính toán thời gian còn lại của món đồ này để set cho Tên mới
+            long elapsedSeconds = (System.currentTimeMillis() - targetBid.getStartTime()) / 1000;
+            long timeLeft = Math.max(1, targetBid.getDuration() - elapsedSeconds);
+
+            // Kích hoạt Timer đếm ngược theo TÊN MỚI
+            startAuctionTimer(newName, (int) timeLeft);
         }
 
         // 2. Sửa dưới Database
