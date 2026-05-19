@@ -77,13 +77,18 @@ public class ClientHandler implements Runnable {
                         break;
 
                     case "EDIT_ITEM":
-                        // payload dạng chuỗi JSON gửi lên từ Client
-                        com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(payload).getAsJsonObject();
-                        String oldName = json.get("oldName").getAsString();
-                        String newName = json.get("newName").getAsString();
-                        int price = json.get("price").getAsInt();
+                        try {
+                            // Bóc tách JSON gửi lên từ Client
+                            com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(payload).getAsJsonObject();
+                            String oldName = json.get("oldName").getAsString();
+                            String newName = json.get("newName").getAsString();
 
-                        model.AuctionManager.getInstance().editItemInSystem(oldName, newName, price);
+                            //  truyền 2 tham số vào Manager
+                            model.AuctionManager.getInstance().editItemInSystem(oldName, newName);
+                        } catch (Exception ex) {
+                            // Lỗi ở lệnh này thì in ra Console, quyết không để sập kết nối của Client!
+                            System.out.println("Lỗi nội bộ khi sửa tên: " + ex.getMessage());
+                        }
                         break;
                     case "GET_PROFILE":
                         // Client gửi tên lên, Server trả ID về
@@ -177,9 +182,14 @@ public class ClientHandler implements Runnable {
         var obj = gson.fromJson(payload, Map.class);
         String item = (String) obj.get("item");
         double price = (double) obj.get("price");
-
-        // 🔥 FIX QUAN TRỌNG: Client phải gửi kèm username lên
         String username = (String) obj.get("username");
+
+        double currentBalance = server.dao.UserDao.getBalance(username);
+        if (currentBalance < price) {
+            // Tiền trong ví ít hơn giá định đặt -> Báo lỗi và đuổi về!
+            sendResponse("NOTIFY", " Đấu giá thất bại! Số dư của bạn không đủ để đặt mức giá này.");
+            return;
+        }
 
         AuctionManager manager = AuctionManager.getInstance();
 
@@ -188,8 +198,10 @@ public class ClientHandler implements Runnable {
             String data = manager.getAllItems();
             AuctionServer.broadcast(gson.toJson(new Request("UPDATE_AUCTION", data)));
 
-            // 💡 Tính năng xịn: Lưu lịch sử vào Database ngay lúc này luôn!
+            // Lưu lịch sử vào Database ngay lúc này luôn!
             server.dao.ItemDao.insertBidHistory(item, username, (int) price);
+        } else {
+            sendResponse("NOTIFY", " Đấu giá thất bại! Vui lòng đặt giá cao hơn giá hiện tại.");
         }
     }
 

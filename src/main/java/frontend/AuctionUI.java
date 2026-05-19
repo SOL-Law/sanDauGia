@@ -111,12 +111,27 @@ public class AuctionUI extends JFrame {
                                 }
                             });
                             break;
+                        // CẬP NHẬT SỐ DƯ LIÊN TỤC
                         case "UPDATE_AUCTION":
                             SwingUtilities.invokeLater(() -> {
                                 updateAuctionInfo(res.getPayload());
                                 if (chartDialog != null && chartDialog.isVisible() && chartDialog.getCurrentItem() != null) {
                                     out.println(gson.toJson(new Request("GET_CHART", chartDialog.getCurrentItem())));
                                 }
+
+                                // THÊM DÒNG NÀY CỰC QUAN TRỌNG: Cứ sàn có biến là tự động gọi Database xin lại số dư
+                                out.println(gson.toJson(new Request("GET_BALANCE", avatarButton.getUsername())));
+                            });
+                            break;
+
+                        //  THÊM MỚI CASE NÀY ĐỂ BẮT THÔNG BÁO TỪ SERVER (Báo lỗi thiếu tiền / Báo thắng giải)
+                        case "NOTIFY":
+                            SwingUtilities.invokeLater(() -> {
+                                //  Bỏ cái hộp thoại chặn ngang màn hình này đi
+                                // JOptionPane.showMessageDialog(AuctionUI.this, res.getPayload());
+
+                                //  Thay bằng cái bảng mờ mờ tự trượt ra vào:
+                                client.ui.auction.NotificationToast.show(AuctionUI.this, res.getPayload());
                             });
                             break;
                     }
@@ -300,16 +315,18 @@ public class AuctionUI extends JFrame {
         editBtn.setPreferredSize(new Dimension(140, 35));
         editBtn.addActionListener(e -> {
             if (selectedItem == null) return;
+
+            // 1. Chỉ hỏi mỗi cái Tên mới
             String newName = JOptionPane.showInputDialog(this, "Nhập tên mới cho sản phẩm:", selectedItem);
-            if (newName == null || newName.trim().isEmpty()) return;
-            String priceStr = JOptionPane.showInputDialog(this, "Nhập giá khởi điểm mới:");
-            if (priceStr == null || priceStr.trim().isEmpty()) return;
-            try {
-                int newPrice = Integer.parseInt(priceStr);
-                String p = String.format("{\"oldName\":\"%s\",\"newName\":\"%s\",\"price\":%d}", selectedItem, newName, newPrice);
-                out.println(gson.toJson(new Request("EDIT_ITEM", p)));
-                selectedItem = null; editBtn.setEnabled(false); deleteBtn.setEnabled(false);
-            } catch (Exception ex) { JOptionPane.showMessageDialog(this, "Giá tiền không hợp lệ!"); }
+
+            // Nếu người dùng ấn Cancel, bỏ trống, hoặc nhập y hệt tên cũ thì thoát luôn
+            if (newName == null || newName.trim().isEmpty() || newName.equals(selectedItem)) return;
+
+            // 2. Gói Tên cũ và Tên mới gửi lên Server (KHÔNG có giá tiền nữa)
+            String p = String.format("{\"oldName\":\"%s\",\"newName\":\"%s\"}", selectedItem, newName);
+            out.println(gson.toJson(new Request("EDIT_ITEM", p)));
+
+            selectedItem = null; editBtn.setEnabled(false); deleteBtn.setEnabled(false);
         });
 
         deleteBtn.setEnabled(false);

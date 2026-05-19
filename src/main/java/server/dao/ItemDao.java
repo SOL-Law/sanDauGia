@@ -245,19 +245,19 @@ public class ItemDao {
     }
 
     // ==========================================
-    // 9. SỬA THÔNG TIN SẢN PHẨM
+    // 9. CHỈ SỬA TÊN SẢN PHẨM
     // ==========================================
-    public static boolean updateItemDetails(String oldName, String newName, int startPrice) {
+    public static boolean updateItemDetails(String oldName, String newName) {
         try (java.sql.Connection conn = server.util.DBConnection.getConnection()) {
-            String sql = "UPDATE items SET name = ?, start_price = ?, current_price = ? WHERE name = ?";
+            // Câu lệnh SQL giờ chỉ UPDATE mỗi cột name
+            String sql = "UPDATE items SET name = ? WHERE name = ?";
             java.sql.PreparedStatement stmt = conn.prepareStatement(sql);
             stmt.setString(1, newName);
-            stmt.setInt(2, startPrice);
-            stmt.setInt(3, startPrice);
-            stmt.setString(4, oldName);
+            stmt.setString(2, oldName);
+
             return stmt.executeUpdate() > 0;
         } catch (Exception e) {
-            System.out.println("Lỗi SQL khi sửa sản phẩm: " + e.getMessage());
+            System.out.println("Lỗi SQL khi sửa tên sản phẩm: " + e.getMessage());
             return false;
         }
     }

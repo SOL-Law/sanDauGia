@@ -216,43 +216,21 @@ public class AuctionManager {
     }
 
     // =========================================
-    // SỬA SẢN PHẨM TRÊN HỆ THỐNG
+    // SỬA TÊN SẢN PHẨM TRÊN HỆ THỐNG
     // =========================================
-    // =========================================
-    // SỬA SẢN PHẨM TRÊN HỆ THỐNG (Đã sửa lỗi kẹt phiên đấu giá)
-    // =========================================
-    public synchronized void editItemInSystem(String oldName, String newName, int startPrice) {
+    public synchronized void editItemInSystem(String oldName, String newName) {
         // 1. Sửa trên RAM Server
-        BidInfo targetBid = null;
         for (java.util.Map.Entry<Integer, BidInfo> entry : items.entrySet()) {
             BidInfo bid = entry.getValue();
 
             if (bid.getItem().equals(oldName)) {
-                bid.setItem(newName);             // Cập nhật tên mới
-                bid.setCurrentPrice(startPrice);  // Cập nhật giá khởi điểm mới
-                bid.setLeader("None");            // Reset người dẫn đầu
-                targetBid = bid;                  // Lưu vết món đồ vừa sửa để cập nhật Timer
+                bid.setItem(newName); // Chỉ cập nhật mỗi cái tên!
                 break;
             }
         }
 
-        // 🔥 ĐỒNG BỘ LẠI TIMER SANG TÊN MỚI
-        if (targetBid != null) {
-            // Hủy timer mang tên cũ
-            java.util.concurrent.ScheduledFuture<?> oldTimer = auctionTimers.remove(oldName);
-            if (oldTimer != null) {
-                oldTimer.cancel(false);
-            }
-            // Tính toán thời gian còn lại của món đồ này để set cho Tên mới
-            long elapsedSeconds = (System.currentTimeMillis() - targetBid.getStartTime()) / 1000;
-            long timeLeft = Math.max(1, targetBid.getDuration() - elapsedSeconds);
-
-            // Kích hoạt Timer đếm ngược theo TÊN MỚI
-            startAuctionTimer(newName, (int) timeLeft);
-        }
-
         // 2. Sửa dưới Database
-        server.dao.ItemDao.updateItemDetails(oldName, newName, startPrice);
+        server.dao.ItemDao.updateItemDetails(oldName, newName);
 
         // 3. Phát loa cập nhật cho tất cả Client
         String data = this.getAllItems();
