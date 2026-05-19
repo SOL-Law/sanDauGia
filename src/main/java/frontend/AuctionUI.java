@@ -68,6 +68,44 @@ public class AuctionUI extends JFrame {
             categoryBtn.setText("Danh mục khác ▾");
         }
     }
+    private void openAutoBidDialog() {
+        if (selectedItem == null) {
+            JOptionPane.showMessageDialog(this, "Vui lòng chọn một sản phẩm trong danh sách trước!");
+            return;
+        }
+
+        JPanel inputPanel = new JPanel(new GridLayout(2, 2, 10, 10));
+        JTextField maxBidField = new JTextField();
+        JTextField incrementField = new JTextField();
+
+        inputPanel.add(new JLabel("Mức giá tối đa bạn chi trả (Max Bid):"));
+        inputPanel.add(maxBidField);
+        inputPanel.add(new JLabel("Bước giá tự động tăng (Increment):"));
+        inputPanel.add(incrementField);
+
+        int result = JOptionPane.showConfirmDialog(this, inputPanel,
+                "🤖 Cài đặt Đấu giá tự động cho: " + selectedItem, JOptionPane.OK_CANCEL_OPTION);
+
+        if (result == JOptionPane.OK_OPTION) {
+            try {
+                int maxBid = Integer.parseInt(maxBidField.getText().trim());
+                int increment = Integer.parseInt(incrementField.getText().trim());
+
+                if (maxBid <= 0 || increment <= 0) {
+                    JOptionPane.showMessageDialog(this, "Dữ liệu nhập vào phải lớn hơn 0!");
+                    return;
+                }
+
+                // Gửi kèm thêm "username" lấy từ biến this.myUsername của AuctionUI để server xử lý
+                String payload = String.format("{\"item\":\"%s\",\"maxBid\":%d,\"increment\":%d,\"username\":\"%s\"}",
+                        selectedItem, maxBid, increment, this.myUsername);
+
+                out.println(gson.toJson(new Request("REGISTER_AUTO_BID", payload)));
+            } catch (NumberFormatException ex) {
+                JOptionPane.showMessageDialog(this, "Vui lòng chỉ nhập ký tự số nguyên hợp lệ!");
+            }
+        }
+    }
 
     private void startListeningServer() {
         new Thread(() -> {
@@ -349,12 +387,26 @@ public class AuctionUI extends JFrame {
         uploadBtn.setPreferredSize(new Dimension(140, 35));
         uploadBtn.addActionListener(e -> new UploadDialog(this, out, gson, avatarButton.getUsername()).setVisible(true));
 
+        // ĐOẠN CODE MỚI THAY THẾ (Đã thêm nút Auto-Bid chuẩn giao diện):
+        JButton autoBidBtn = new JButton("🤖 Auto-Bid");
+        autoBidBtn.setBackground(new Color(255, 140, 0)); // Màu cam nổi bật
+        autoBidBtn.setForeground(Color.WHITE);
+        autoBidBtn.setFont(new Font("Helvetica", Font.BOLD, 13));
+        autoBidBtn.setPreferredSize(new Dimension(110, 35));
+        autoBidBtn.addActionListener(e -> openAutoBidDialog());
+
         if ("BIDDER".equals(userRole)) {
-            bottomPanel.add(label); bottomPanel.add(bidField); bottomPanel.add(bidButton);
+            bottomPanel.add(label);
+            bottomPanel.add(bidField);
+            bottomPanel.add(bidButton);
+            bottomPanel.add(autoBidBtn); // Thêm nút Auto-Bid cho người mua
         } else if ("SELLER".equals(userRole)) {
             bottomPanel.add(editBtn); bottomPanel.add(deleteBtn); bottomPanel.add(uploadBtn);
         } else if ("ADMIN".equals(userRole)) {
-            bottomPanel.add(label); bottomPanel.add(bidField); bottomPanel.add(bidButton);
+            bottomPanel.add(label);
+            bottomPanel.add(bidField);
+            bottomPanel.add(bidButton);
+            bottomPanel.add(autoBidBtn); // Thêm nút Auto-Bid cho Admin
             bottomPanel.add(editBtn); bottomPanel.add(deleteBtn); bottomPanel.add(uploadBtn);
         }
 
@@ -394,6 +446,7 @@ public class AuctionUI extends JFrame {
 
     //  TRANG CÀI ĐẶT (ĐÃ KẾT NỐI DATABASE CHUẨN)
     private void setupSettingsPage(JPanel panel) {
+
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(12, 15, 12, 15);
         gbc.fill = GridBagConstraints.HORIZONTAL;

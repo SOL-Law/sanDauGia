@@ -46,6 +46,7 @@ public class ClientHandler implements Runnable {
                         handleRegister(payload);
                         break;
                     case "PLACE_BID":
+                        // Gọi thẳng hàm xử lý đặt giá có sẵn ở dưới để bóc tách payload không lo lỗi biến
                         handleBid(payload);
                         break;
                     case "UPLOAD_ITEM":
@@ -95,7 +96,33 @@ public class ClientHandler implements Runnable {
                         String userId = server.dao.UserDao.getUserId(payload);
                         sendResponse("PROFILE_DATA", userId);
                         break;
+                    // Trong hàm xử lý gói tin (vòng switch-case lệnh nhận được từ client):
 
+                    case "REGISTER_AUTO_BID":
+                        try {
+                            com.google.gson.JsonObject autoPayload = gson.fromJson(payload, com.google.gson.JsonObject.class);
+                            String autoItem = autoPayload.get("item").getAsString();
+                            int maxBid = autoPayload.get("maxBid").getAsInt();
+                            int increment = autoPayload.get("increment").getAsInt();
+                            String autoUser = autoPayload.get("username").getAsString();
+
+                            // Khởi tạo cấu hình và đẩy vào list quản lý trên Server RAM
+                            model.AutoBid newAuto = new model.AutoBid(autoUser, autoItem, maxBid, increment);
+                            model.AuctionManager.getInstance().registerAutoBid(newAuto);
+
+                            // Gửi thông báo về riêng cho Client vừa cài đặt
+                            sendResponse("NOTIFY", "🤖 Đã kích hoạt Auto-Bid thành công cho mặt hàng: " + autoItem);
+
+                            // Chạy thử thuật toán tự kích hoạt nâng giá luôn phòng khi giá hiện tại đang thấp hơn cấu hình
+                            model.AuctionManager.getInstance().executeAutoBidding(autoItem);
+
+                            // Phát sóng cập nhật bảng giá mới nhất sau cuộc chiến của các bot cho cả phòng xem công khai
+                            String freshData = model.AuctionManager.getInstance().getAllItems();
+                            AuctionServer.broadcast(gson.toJson(new Request("UPDATE_AUCTION", freshData)));
+                        } catch (Exception ex) {
+                            System.out.println("Lỗi xử lý REGISTER_AUTO_BID: " + ex.getMessage());
+                        }
+                        break;
                     case "UPDATE_PROFILE":
                         // Client gửi JSON chứa tên cũ, tên mới, pass mới
                         com.google.gson.JsonObject pObj = com.google.gson.JsonParser.parseString(payload).getAsJsonObject();
@@ -105,6 +132,7 @@ public class ClientHandler implements Runnable {
 
                         server.dao.UserDao.updateProfile(oldU, newU, newP);
                         break;
+
                 }
             }
         } catch (Exception e) {
@@ -183,22 +211,21 @@ public class ClientHandler implements Runnable {
         String item = (String) obj.get("item");
         double price = (double) obj.get("price");
         String username = (String) obj.get("username");
-
         double currentBalance = server.dao.UserDao.getBalance(username);
+
         if (currentBalance < price) {
-            // Tiền trong ví ít hơn giá định đặt -> Báo lỗi và đuổi về!
             sendResponse("NOTIFY", " Đấu giá thất bại! Số dư của bạn không đủ để đặt mức giá này.");
             return;
         }
 
         AuctionManager manager = AuctionManager.getInstance();
-
-        // Ghi nhận đặt giá. Nếu thành công thì Loan báo cho cả phòng!
         if (manager.placeBid(item, (int) price, username)) {
+
+            // 🔥 CHÈN DÒNG NÀY VÀO ĐÂY: Kích hoạt cuộc chiến nâng giá tự động của các Bot ngay lập tức!
+            manager.executeAutoBidding(item);
+
             String data = manager.getAllItems();
             AuctionServer.broadcast(gson.toJson(new Request("UPDATE_AUCTION", data)));
-
-            // Lưu lịch sử vào Database ngay lúc này luôn!
             server.dao.ItemDao.insertBidHistory(item, username, (int) price);
         } else {
             sendResponse("NOTIFY", " Đấu giá thất bại! Vui lòng đặt giá cao hơn giá hiện tại.");

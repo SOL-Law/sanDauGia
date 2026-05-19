@@ -6,7 +6,10 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
-
+import model.AutoBid;
+import java.util.PriorityQueue;
+import java.util.List;
+import java.util.concurrent.CopyOnWriteArrayList;
 public class AuctionManager {
     // Công cụ hẹn giờ siêu chuẩn của Java
     private final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(10);
@@ -18,6 +21,71 @@ public class AuctionManager {
 
     // auto-increment ID
     private final AtomicInteger idCounter = new AtomicInteger(0);
+
+    
+// 1. Thêm cấu trúc dữ liệu lưu danh sách AutoBid toàn hệ thống công khai
+    private final List<AutoBid> autoBidsList = new CopyOnWriteArrayList<>();
+
+    // 2. Hàm đăng ký AutoBid (Thread-safe)
+    public synchronized void registerAutoBid(AutoBid newAutoBid) {
+        // Nếu user đã đăng ký AutoBid cho sản phẩm này trước đó, xóa cấu hình cũ đi để ghi đè cấu hình mới
+        autoBidsList.removeIf(ab -> ab.getUsername().equals(newAutoBid.getUsername())
+                && ab.getItemName().equals(newAutoBid.getItemName()));
+        autoBidsList.add(newAutoBid);
+        System.out.println("🤖 ĐĂNG KÝ AUTO-BID: User [" + newAutoBid.getUsername() + "] sản phẩm [" + newAutoBid.getItemName() + "]");
+    }
+
+    // 3. THUẬT TOÁN ĐẤU GIÁ TỰ ĐỘNG CHÍNH (Sử dụng PriorityQueue theo yêu cầu đề bài)
+    public void executeAutoBidding(String itemName) {
+        boolean insideWar;
+        do {
+            insideWar = false;
+
+            // A. Lấy thông tin giá hiện tại của món đồ trong RAM
+            BidInfo info = null;
+            for (BidInfo b : items.values()) {
+                if (b.getItem().equals(itemName)) {
+                    info = b;
+                    break;
+                }
+            }
+            if (info == null) return;
+
+            int currentPrice = info.getCurrentPrice();
+            String currentLeader = info.getLeader();
+
+            // B. Khởi tạo PriorityQueue xếp theo thời gian đăng ký tăng dần (Ai đăng ký trước ưu tiên trước)
+            PriorityQueue<AutoBid> queue = new PriorityQueue<>(
+                    (a, b) -> Long.compare(a.getRegisteredTime(), b.getRegisteredTime())
+            );
+
+            // C. Lọc ra các AutoBid hợp lệ: Đúng sản phẩm, không phải người đang dẫn đầu, và maxBid > giá hiện tại
+            for (AutoBid ab : autoBidsList) {
+                if (ab.getItemName().equals(itemName)
+                        && !ab.getUsername().equals(currentLeader)
+                        && ab.getMaxBid() > currentPrice) {
+                    queue.add(ab);
+                }
+            }
+
+            // D. Thử kích hoạt lệnh đặt giá của ứng viên ưu tiên cao nhất
+            while (!queue.isEmpty()) {
+                AutoBid candidate = queue.poll();
+                int nextPrice = currentPrice + candidate.getIncrement();
+
+                // Kiểm tra xem bước giá mới có vượt ngưỡng chịu đựng (maxBid) của người dùng không
+                if (nextPrice <= candidate.getMaxBid()) {
+                    // Tiến hành tự động gọi hàm đặt giá gốc
+                    if (this.placeBid(itemName, nextPrice, candidate.getUsername())) {
+                        // Lưu luôn lịch sử vào database từng bước để vẽ đồ thị Price Curve mượt mà
+                        server.dao.ItemDao.insertBidHistory(itemName, candidate.getUsername(), nextPrice);
+                        insideWar = true; // Đặt giá thành công, kích hoạt tiếp vòng kiểm tra sau
+                        break;
+                    }
+                }
+            }
+        } while (insideWar); // Lặp lại vòng đấu cho đến khi không còn bot nào nâng giá được nữa
+    }
 
     private AuctionManager() {
         System.out.println(" AuctionManager initialized");
