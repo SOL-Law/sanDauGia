@@ -12,6 +12,8 @@ import java.awt.event.ActionEvent;
 import java.io.*;
 import java.net.Socket;
 
+import com.formdev.flatlaf.themes.FlatMacDarkLaf;
+
 public class AuthFrame extends JFrame {
 
     private CardLayout layout = new CardLayout();
@@ -23,7 +25,7 @@ public class AuthFrame extends JFrame {
     private BufferedReader in;
     private Gson gson;
 
-    // 🔥 THÊM BIẾN NÀY ĐỂ LƯU TRỮ TÊN ĐĂNG NHẬP
+    // Biến lưu trữ tên đăng nhập của phiên hiện tại
     public String currentUsername = "admin";
 
     public AuthFrame() {
@@ -36,6 +38,7 @@ public class AuthFrame extends JFrame {
         setLocationRelativeTo(null);
         setDefaultCloseOperation(EXIT_ON_CLOSE);
 
+        // Lưu ý: Đảm bảo bạn đã có các file ảnh này trong thư mục resources
         bg = new AnimatedBackground("/images/bg1.jpg", "/images/bg2.jpg");
         bg.setLayout(new BorderLayout());
 
@@ -51,13 +54,18 @@ public class AuthFrame extends JFrame {
         setVisible(true);
     }
 
+    // Hàm bổ sung giúp LoginPanel cập nhật tên đăng nhập thực tế khi bấm nút Đăng nhập
+    public void setCurrentUsername(String username) {
+        this.currentUsername = username;
+    }
+
     private void connectServer() {
         try {
             socket = new Socket("localhost", 8888);
             out = new PrintWriter(socket.getOutputStream(), true);
             in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             gson = new Gson();
-            System.out.println("✅ Connected");
+            System.out.println("✅ Connected to Server");
         } catch (Exception e) {
             JOptionPane.showMessageDialog(this, "Không kết nối được server!");
             System.exit(0);
@@ -79,7 +87,7 @@ public class AuthFrame extends JFrame {
                             } catch (JsonSyntaxException ex) {
                                 loginSuccess("USER");
                             }
-                            return;
+                            return; // Thoát luồng nghe để chuyển giao diện
 
                         case "LOGIN_FAIL":
                             SwingUtilities.invokeLater(this::shakeWindow);
@@ -88,6 +96,7 @@ public class AuthFrame extends JFrame {
 
                         case "REGISTER_SUCCESS":
                             JOptionPane.showMessageDialog(this, "Đăng ký thành công!");
+                            showLogin();
                             break;
 
                         case "REGISTER_FAIL":
@@ -110,7 +119,7 @@ public class AuthFrame extends JFrame {
         loading.setUndecorated(true);
         loading.setSize(520, 300);
         loading.setLocationRelativeTo(this);
-        loading.setBackground(new Color(0,0,0,0));
+        loading.setBackground(new Color(0, 0, 0, 0));
 
         LoadingPanel panel = new LoadingPanel();
         loading.add(panel);
@@ -121,9 +130,9 @@ public class AuthFrame extends JFrame {
 
         textTimer.addActionListener(e -> {
             dot[0]++;
-            String s = "Opening Auction Center";
-            for(int i=0; i<dot[0]%4; i++) s += ".";
-            panel.setText(s);
+            StringBuilder s = new StringBuilder("Opening Auction Center");
+            for (int i = 0; i < dot[0] % 4; i++) s.append(".");
+            panel.setText(s.toString());
         });
         textTimer.start();
 
@@ -131,7 +140,7 @@ public class AuthFrame extends JFrame {
             textTimer.stop();
             loading.dispose();
 
-            // 🔥 TRUYỀN BIẾN currentUsername VÀO ĐÂY (HẾT BÁO ĐỎ LÒM!)
+            // Truyền thông tin đăng nhập thực tế vào màn hình chính chính xác
             AuctionUI ui = new AuctionUI(out, in, gson, role, currentUsername);
 
             try {
@@ -148,35 +157,55 @@ public class AuthFrame extends JFrame {
         timer.start();
     }
 
+    /**
+     * 🔥 ĐÃ NÂNG CẤP: Hiệu ứng rung màn hình khi lỗi theo thuật toán giảm chấn mượt mà
+     */
     private void shakeWindow() {
-        Point p = getLocation();
-        Timer timer = new Timer(18, null);
-        final int[] count = {0};
+        final Point originalPos = getLocation();
+        final int[] shakeSequence = {16, -14, 12, -10, 8, -6, 4, -2, 0};
+        Timer timer = new Timer(20, null);
+        final int[] index = {0};
+
         timer.addActionListener(e -> {
-            int x = p.x + (count[0] % 2 == 0 ? 12 : -12);
-            setLocation(x, p.y);
-            count[0]++;
-            if (count[0] >= 10) {
+            if (index[0] < shakeSequence.length) {
+                int offset = shakeSequence[index[0]];
+                setLocation(originalPos.x + offset, originalPos.y);
+                index[0]++;
+            } else {
                 timer.stop();
-                setLocation(p);
+                setLocation(originalPos); // Trả lại vị trí ban đầu chuẩn xác
             }
         });
         timer.start();
     }
 
+    /**
+     * 🔥 ĐÃ NÂNG CẤP: Hiệu ứng Slide-In lướt mượt theo thuật toán Ease-Out (Chạy nhanh đầu, chậm dần về cuối)
+     */
     private void slideFadeIn(JFrame frame) {
-        Point end = frame.getLocation();
-        frame.setLocation(end.x + 140, end.y);
+        final Point targetPos = frame.getLocation();
+        final int startX = targetPos.x + 150; // Xuất phát từ phía bên phải 150px
+        frame.setLocation(startX, targetPos.y);
+
         Timer timer = new Timer(15, null);
         final float[] opacity = {0f};
-        final int[] dx = {140};
 
         timer.addActionListener((ActionEvent e) -> {
-            opacity[0] += 0.05f;
-            dx[0] -= 7;
+            // Tăng độ mờ dần đều
+            opacity[0] += 0.04f;
             frame.setOpacity(Math.min(opacity[0], 1f));
-            frame.setLocation(end.x + Math.max(dx[0], 0), end.y);
-            if(opacity[0] >= 1f && dx[0] <= 0) {
+
+            // Thuật toán gắp khoảng cách Ease-Out giúp di chuyển mượt mà không bị khựng
+            int currentX = frame.getX();
+            int diff = targetPos.x - currentX;
+
+            if (Math.abs(diff) > 1 && opacity[0] < 1f) {
+                // Mỗi khung hình đi 15% khoảng cách còn lại đến đích
+                currentX += Math.round(diff * 0.15f);
+                frame.setLocation(currentX, targetPos.y);
+            } else {
+                frame.setOpacity(1f);
+                frame.setLocation(targetPos);
                 timer.stop();
             }
         });
@@ -185,26 +214,48 @@ public class AuthFrame extends JFrame {
 
     public void showRegister() {
         layout.show(content, "register");
-        bg.switchBackground();
+        if (bg != null) bg.switchBackground();
     }
 
     public void showLogin() {
         layout.show(content, "login");
-        bg.switchBackground();
+        if (bg != null) bg.switchBackground();
     }
 
     public static void main(String[] args) {
+        try {
+            // 1. Kích hoạt cấu trúc giao diện FlatLaf cao cấp giả lập Mac Dark Mode
+            FlatMacDarkLaf.setup();
+
+            // 2. Cài đặt các thuộc tính thẩm mỹ bo góc toàn hệ thống ứng dụng (Global)
+            UIManager.put("Component.arc", 12);           // Bo góc toàn bộ ô Textfield, JComboBox
+            UIManager.put("Button.arc", 12);              // Bo góc toàn bộ các JButton
+            UIManager.put("ScrollBar.thumbArc", 999);     // Biến thanh cuộn thành thanh thuôn bo tròn
+            UIManager.put("TableHeader.background", "#252526"); // Đổi màu nền thanh tiêu đề bảng
+
+        } catch (Exception ex) {
+            System.err.println("⚠️ Không thể kích hoạt giao diện FlatLaf, hệ thống sẽ dùng giao diện mặc định.");
+        }
+
+        // 3. Khởi chạy cửa sổ đúng luồng an toàn luồng của Swing (Đã sửa lỗi cú pháp dính luồng)
         SwingUtilities.invokeLater(AuthFrame::new);
     }
 }
 
+/**
+ * Panel màn hình chờ xoay tròn hiển thị hiệu ứng đồ họa chất lượng cao
+ */
 class LoadingPanel extends JPanel {
     private float angle = 0f;
     private String text = "Opening Auction Center";
 
     public LoadingPanel() {
         setOpaque(false);
-        Timer timer = new Timer(16, e -> { angle += 6f; repaint(); });
+        // Tốc độ quay của vòng cung tải trang
+        Timer timer = new Timer(16, e -> {
+            angle += 5f;
+            repaint();
+        });
         timer.start();
     }
 
@@ -213,20 +264,34 @@ class LoadingPanel extends JPanel {
         repaint();
     }
 
+    @Override
     protected void paintComponent(Graphics g) {
+        super.paintComponent(g);
         Graphics2D g2 = (Graphics2D) g.create();
+
+        // BẬT KHỬ RĂNG CƯA ĐỒ HỌA: Giúp chữ và vòng tròn mịn màng, không bị gai vỡ hạt
         g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-        g2.setColor(new Color(18,18,18,235));
-        g2.fillRoundRect(0,0,getWidth(),getHeight(), 30,30);
-        g2.setColor(new Color(90,140,255));
-        g2.setStroke(new BasicStroke(6, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
-        g2.drawArc(getWidth()/2 - 35, 70, 70, 70, (int)angle, 260);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+
+        // Vẽ nền Panel bo góc trong suốt huyền ảo
+        g2.setColor(new Color(18, 18, 18, 235));
+        g2.fillRoundRect(0, 0, getWidth(), getHeight(), 30, 30);
+
+        // Cấu hình nét vẽ vòng tròn loading rực rỡ
+        g2.setColor(new Color(90, 140, 255));
+        g2.setStroke(new BasicStroke(5, BasicStroke.CAP_ROUND, BasicStroke.JOIN_ROUND));
+        g2.drawArc(getWidth() / 2 - 35, 65, 70, 70, (int) angle, 270);
+
+        // Vẽ chữ tiêu đề WELCOME BACK sang trọng
         g2.setColor(Color.WHITE);
         g2.setFont(new Font("Segoe UI", Font.BOLD, 24));
-        drawCenter(g2, "WELCOME BACK", 160);
-        g2.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+        drawCenter(g2, "WELCOME BACK", 165);
+
+        // Vẽ dòng chữ mô tả trạng thái chuyển đổi bên dưới
+        g2.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         g2.setColor(Color.LIGHT_GRAY);
-        drawCenter(g2, text, 215);
+        drawCenter(g2, text, 220);
+
         g2.dispose();
     }
 
