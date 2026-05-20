@@ -22,14 +22,14 @@ public class NotificationToast extends JWindow {
                 g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
                 g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
 
-                // Nền đen đặc cao cấp trong suốt nhẹ (Alpha = 230)
+                // Nền đen đặc cao cấp trong suốt nhẹ
                 g2.setColor(new Color(25, 25, 28, 230));
                 g2.fill(new RoundRectangle2D.Float(0, 0, getWidth(), getHeight(), 14, 14));
 
-                // Thanh màu nhấn trang trí dọc bên trái (Xanh dương công nghệ)
+                // Thanh màu nhấn trang trí dọc bên trái
                 g2.setColor(new Color(90, 140, 255));
                 g2.fillRoundRect(0, 0, 6, getHeight(), 14, 14);
-                g2.fillRect(3, 0, 3, getHeight()); // Ghép vuông cạnh trong
+                g2.fillRect(3, 0, 3, getHeight());
 
                 // Đường viền tổng thể mờ ảo
                 g2.setStroke(new BasicStroke(1f));
@@ -39,10 +39,10 @@ public class NotificationToast extends JWindow {
             }
         };
         panel.setOpaque(false);
-        panel.setBorder(BorderFactory.createEmptyBorder(15, 22, 15, 22)); // Đệm chữ tránh đè thanh nhấn
+        panel.setBorder(BorderFactory.createEmptyBorder(15, 22, 15, 22));
 
         JLabel label = new JLabel(message);
-        label.setFont(new Font("Segoe UI", Font.BOLD, 13));
+        label.setFont(new Font("Helvetica", Font.BOLD, 13));
         label.setForeground(Color.WHITE);
         panel.add(label, BorderLayout.CENTER);
 
@@ -58,7 +58,6 @@ public class NotificationToast extends JWindow {
         setOpacity(0f);
         setVisible(true);
 
-        // 🔥 THUẬT TOÁN TRƯỢT EASE-OUT MƯỢT MÀ (CHẠY NHANH ĐẦU, CHẬM DẦN VỀ CUỐI)
         Timer slideIn = new Timer(15, null);
         final int[] currentX = {startX};
 
@@ -68,14 +67,17 @@ public class NotificationToast extends JWindow {
             setOpacity(opacity);
 
             int diffX = finalX - currentX[0];
-            if (Math.abs(diffX) > 1) {
-                // Di chuyển 15% khoảng cách còn lại ở mỗi khung hình để tạo hiệu ứng phanh xe mượt
-                currentX[0] += Math.round(diffX * 0.15f);
+            if (Math.abs(diffX) > 0) {
+                // FIX LỖI KẸT PIXEL: Đảm bảo luôn di chuyển ít nhất 1px
+                int step = (int) (diffX * 0.15f);
+                if (step == 0) step = (diffX > 0) ? 1 : -1;
+
+                currentX[0] += step;
                 setLocation(currentX[0], y);
             } else {
                 setLocation(finalX, y);
                 slideIn.stop();
-                // Dừng lại xem thông báo trong 3 giây rồi tự thụt lùi biến mất
+                // Bay vào xong rồi thì chờ 3 giây để thụt ra
                 waitAndSlideOut(finalX, startX);
             }
         });
@@ -93,12 +95,16 @@ public class NotificationToast extends JWindow {
                 setOpacity(opacity);
 
                 int diffX = endX - currentX[0];
-                if (Math.abs(diffX) > 1 && opacity > 0f) {
-                    currentX[0] += Math.round(diffX * 0.15f);
+                if (Math.abs(diffX) > 0 && opacity > 0f) {
+                    //  FIX LỖI KẸT PIXEL LÚC THỤT RA
+                    int step = (int) (diffX * 0.15f);
+                    if (step == 0) step = (diffX > 0) ? 1 : -1;
+
+                    currentX[0] += step;
                     setLocation(currentX[0], y);
                 } else {
                     slideOut.stop();
-                    dispose(); // Giải phóng tài nguyên RAM hệ thống an toàn
+                    dispose(); // Giải phóng RAM
                 }
             });
             slideOut.start();

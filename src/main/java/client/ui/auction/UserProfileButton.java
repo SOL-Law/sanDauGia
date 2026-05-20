@@ -64,58 +64,13 @@ public class UserProfileButton extends JButton {
         balanceItem.setForeground(new Color(0, 150, 0));
         balanceItem.setEnabled(false);
 
-        // --- 2. Nạp tiền ---
+        // --- 2. Nạp tiền (CHỈ ĐIỀU HƯỚNG TRANG) ---
         JMenuItem depositItem = new JMenuItem(" Nạp tiền");
         depositItem.setPreferredSize(new Dimension(280, 40));
         depositItem.setFont(new Font("Helvetica", Font.PLAIN, 16));
-        depositItem.addActionListener(e -> {
-            String input = JOptionPane.showInputDialog(this, "Nhập số tiền muốn nạp (VNĐ):");
-            if (input == null || input.trim().isEmpty()) return;
-            try {
-                double amount = Double.parseDouble(input);
-                if (amount <= 0) throw new Exception();
+        depositItem.addActionListener(e -> mainUI.switchPage("Nạp tiền"));
 
-                JDialog qrDialog = new JDialog();
-                qrDialog.setTitle("Cổng thanh toán tự động");
-                qrDialog.setSize(350, 400);
-                qrDialog.setLocationRelativeTo(this);
-                qrDialog.setLayout(new BorderLayout());
-
-                JLabel infoLabel = new JLabel("<html><center>Vui lòng chuyển khoản với nội dung:<br><b style='color:red;'>NAP " + username + "</b></center></html>", SwingConstants.CENTER);
-                ImageIcon qrIcon = new ImageIcon(new ImageIcon("src/main/java/frontend/icons/qr-donate.jpg").getImage().getScaledInstance(200, 200, Image.SCALE_SMOOTH));
-                JLabel qrLabel = new JLabel(qrIcon);
-
-                JButton btnDone = new JButton("Đã chuyển khoản xong");
-                btnDone.setBackground(new Color(0, 150, 0));
-                btnDone.setForeground(Color.WHITE);
-
-                qrDialog.add(infoLabel, BorderLayout.NORTH);
-                qrDialog.add(qrLabel, BorderLayout.CENTER);
-                qrDialog.add(btnDone, BorderLayout.SOUTH);
-
-                btnDone.addActionListener(event -> {
-                    btnDone.setText("Đang chờ ngân hàng xác nhận...");
-                    btnDone.setBackground(Color.GRAY);
-                    btnDone.setEnabled(false);
-                    qrDialog.setDefaultCloseOperation(JDialog.DO_NOTHING_ON_CLOSE);
-
-                    new Thread(() -> {
-                        try {
-                            Thread.sleep(3000);
-                            qrDialog.dispose();
-                            String payload = String.format("{\"username\":\"%s\",\"amount\":%f}", username, amount);
-                            out.println(gson.toJson(new network.Request("DEPOSIT", payload)));
-                            JOptionPane.showMessageDialog(this, "Ting ting! Nạp tiền thành công.");
-                        } catch (Exception ex) {}
-                    }).start();
-                });
-                qrDialog.setVisible(true);
-            } catch (Exception ex) {
-                JOptionPane.showMessageDialog(this, "Số tiền không hợp lệ!");
-            }
-        });
-
-        // --- 3. Thông tin cá nhân ( ĐÃ FIX ĐIỀU HƯỚNG SANG TRANG MỚI) ---
+        // --- 3. Thông tin cá nhân ---
         JMenuItem profileItem = new JMenuItem(" Thông tin cá nhân");
         profileItem.setPreferredSize(new Dimension(280, 40));
         profileItem.setFont(new Font("Helvetica", Font.PLAIN, 16));
@@ -127,27 +82,14 @@ public class UserProfileButton extends JButton {
         historyItem.setFont(new Font("Helvetica", Font.PLAIN, 16));
         historyItem.addActionListener(e -> out.println(gson.toJson(new network.Request("GET_MY_HISTORY", this.username))));
 
-        // --- 5. Donate ---
+        // --- 5. Donate (CHỈ ĐIỀU HƯỚNG TRANG) ---
         JMenuItem donateItem = new JMenuItem(" Donate cho Dev");
         donateItem.setPreferredSize(new Dimension(280, 40));
         donateItem.setFont(new Font("Helvetica", Font.PLAIN, 16));
         donateItem.setForeground(Color.MAGENTA);
-        donateItem.addActionListener(e -> {
-            try {
-                ImageIcon originalIcon = new ImageIcon("src/main/java/frontend/icons/qr-donate.jpg");
-                if (originalIcon.getImageLoadStatus() == java.awt.MediaTracker.ERRORED) {
-                    JOptionPane.showMessageDialog(this, "Lỗi: Không tìm thấy ảnh QR tại đường dẫn này!");
-                    return;
-                }
-                Image scaledImg = originalIcon.getImage().getScaledInstance(400, 400, Image.SCALE_SMOOTH);
-                ImageIcon finalIcon = new ImageIcon(scaledImg);
-                JOptionPane.showMessageDialog(this, "Cảm ơn bạn đã ủng hộ Dev cốc cafe nhé! <3", "Ủng hộ tác giả", JOptionPane.INFORMATION_MESSAGE, finalIcon);
-            } catch (Exception ex) {
-                ex.printStackTrace();
-            }
-        });
+        donateItem.addActionListener(e -> mainUI.switchPage("Donate"));
 
-        // --- 6. Cài đặt ( ĐÃ FIX ĐIỀU HƯỚNG SANG TRANG QUAN LÝ NHƯ ẢNH) ---
+        // --- 6. Cài đặt ---
         JMenuItem settingsItem = new JMenuItem(" Cài đặt tài khoản");
         settingsItem.setPreferredSize(new Dimension(280, 40));
         settingsItem.setFont(new Font("Helvetica", Font.PLAIN, 16));

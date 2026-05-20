@@ -238,6 +238,15 @@ public class AuctionUI extends JFrame {
         settingsCard.setBackground(Color.WHITE);
         setupSettingsPage(settingsCard);
         cardPanel.add(settingsCard, "Cài đặt");
+        //  TẠO TRANG NẠP TIỀN
+        JPanel depositCard = new JPanel(new GridBagLayout());
+        setupDepositPage(depositCard);
+        cardPanel.add(depositCard, "Nạp tiền");
+
+        //  TẠO TRANG DONATE
+        JPanel donateCard = new JPanel(new GridBagLayout());
+        setupDonatePage(donateCard);
+        cardPanel.add(donateCard, "Donate");
 
         // ========================= 2. BREADCRUMB =========================
         breadcrumbLabel = new JLabel("<html><font color='#0064d2'><b>Trang chủ</b></font> &gt; Tất cả</html>");
@@ -420,32 +429,49 @@ public class AuctionUI extends JFrame {
         setContentPane(background);
     }
 
-    //  TRANG THÔNG TIN
+    //  TRANG THÔNG TIN CÁ NHÂN (ĐÃ FIX GIAO DIỆN DARK MODE)
     private void setupProfilePage(JPanel panel) {
+        // Đổi nền thành màu xám đen đồng bộ với trang Cài đặt
+        panel.setBackground(new Color(25, 25, 28));
+
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(15, 15, 15, 15);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         JLabel title = new JLabel("HỒ SƠ CÁ NHÂN", SwingConstants.CENTER);
         title.setFont(new Font("Helvetica", Font.BOLD, 22));
+        title.setForeground(Color.WHITE); // Chữ trắng sáng
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2; panel.add(title, gbc);
 
         gbc.gridwidth = 1;
-        JLabel nameLbl = new JLabel("Tên tài khoản: "); nameLbl.setFont(new Font("Helvetica", Font.BOLD, 16));
+        JLabel nameLbl = new JLabel("Tên tài khoản: ");
+        nameLbl.setFont(new Font("Helvetica", Font.BOLD, 16));
+        nameLbl.setForeground(Color.LIGHT_GRAY); // Màu xám nhạt
         gbc.gridy = 1; gbc.gridx = 0; panel.add(nameLbl, gbc);
-        JLabel nameVal = new JLabel("Đang tải..."); nameVal.setFont(new Font("Helvetica", Font.PLAIN, 16));
+
+        JLabel nameVal = new JLabel("Đang tải...");
+        nameVal.setFont(new Font("Helvetica", Font.PLAIN, 16));
+        nameVal.setForeground(new Color(90, 140, 255)); // Tên User màu xanh công nghệ nổi bật
         gbc.gridx = 1; panel.add(nameVal, gbc);
 
-        JLabel roleLbl = new JLabel("Quyền hạn: "); roleLbl.setFont(new Font("Helvetica", Font.BOLD, 16));
+        JLabel roleLbl = new JLabel("Quyền hạn: ");
+        roleLbl.setFont(new Font("Helvetica", Font.BOLD, 16));
+        roleLbl.setForeground(Color.LIGHT_GRAY);
         gbc.gridy = 2; gbc.gridx = 0; panel.add(roleLbl, gbc);
-        JLabel roleVal = new JLabel(userRole); roleVal.setFont(new Font("Helvetica", Font.PLAIN, 16));
+
+        JLabel roleVal = new JLabel(userRole);
+        roleVal.setFont(new Font("Helvetica", Font.PLAIN, 16));
+        roleVal.setForeground(Color.WHITE); // Quyền hạn màu trắng
         gbc.gridx = 1; panel.add(roleVal, gbc);
 
-        Timer t = new Timer(1000, e -> nameVal.setText(avatarButton.getUsername())); t.start();
+        Timer t = new Timer(1000, e -> nameVal.setText(avatarButton.getUsername()));
+        t.start();
     }
 
-    //  TRANG CÀI ĐẶT (ĐÃ KẾT NỐI DATABASE CHUẨN)
+    //  TRANG CÀI ĐẶT (ĐÃ FIX GIAO DIỆN DARK MODE)
     private void setupSettingsPage(JPanel panel) {
+        // Đổi nền thành màu Dark Mode xám đen
+        panel.setBackground(new Color(25, 25, 28));
 
         GridBagConstraints gbc = new GridBagConstraints();
         gbc.insets = new Insets(12, 15, 12, 15);
@@ -453,32 +479,46 @@ public class AuctionUI extends JFrame {
 
         JLabel title = new JLabel("QUẢN LÝ TÀI KHOẢN", SwingConstants.CENTER);
         title.setFont(new Font("Helvetica", Font.BOLD, 22));
+        title.setForeground(Color.WHITE); // Chữ trắng
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2; panel.add(title, gbc);
 
         gbc.gridwidth = 1;
         JLabel idLbl = new JLabel("ID Tài khoản: "); idLbl.setFont(new Font("Helvetica", Font.BOLD, 15));
+        idLbl.setForeground(Color.LIGHT_GRAY);
         gbc.gridy = 1; gbc.gridx = 0; panel.add(idLbl, gbc);
 
-        // Gắn biến idVal ra ngoài để hàm Listener cập nhật được
         idVal = new JLabel("Đang tải..."); idVal.setFont(new Font("Helvetica", Font.PLAIN, 15));
+        idVal.setForeground(new Color(90, 140, 255)); // Đổi màu ID thành xanh cho nổi bật
         gbc.gridx = 1; panel.add(idVal, gbc);
 
-        // Khi trang cài đặt load xong, tự động xin Server cái ID
         SwingUtilities.invokeLater(() -> out.println(gson.toJson(new Request("GET_PROFILE", avatarButton.getUsername()))));
 
         JLabel nameLbl = new JLabel("Đổi tên hiển thị: "); nameLbl.setFont(new Font("Helvetica", Font.BOLD, 15));
+        nameLbl.setForeground(Color.LIGHT_GRAY);
         gbc.gridy = 2; gbc.gridx = 0; panel.add(nameLbl, gbc);
+
         JTextField nameField = new JTextField(15);
+        nameField.setBackground(new Color(40, 40, 45)); // Ô nhập màu xám đậm
+        nameField.setForeground(Color.WHITE);
+        nameField.setCaretColor(Color.WHITE);
         gbc.gridx = 1; panel.add(nameField, gbc);
 
         JLabel passLbl = new JLabel("Đổi mật khẩu mới: "); passLbl.setFont(new Font("Helvetica", Font.BOLD, 15));
+        passLbl.setForeground(Color.LIGHT_GRAY);
         gbc.gridy = 3; gbc.gridx = 0; panel.add(passLbl, gbc);
+
         JPasswordField passField = new JPasswordField(15);
+        passField.setBackground(new Color(40, 40, 45));
+        passField.setForeground(Color.WHITE);
+        passField.setCaretColor(Color.WHITE);
         gbc.gridx = 1; panel.add(passField, gbc);
 
         JButton saveBtn = new JButton("Áp dụng thay đổi");
-        saveBtn.setBackground(new Color(0, 100, 210)); saveBtn.setForeground(Color.WHITE);
+        saveBtn.setBackground(new Color(0, 100, 210));
+        saveBtn.setForeground(Color.WHITE);
         gbc.gridy = 4; gbc.gridx = 0; gbc.gridwidth = 2; panel.add(saveBtn, gbc);
+
+        // ... (Phần trên của setupSettingsPage giữ nguyên)
 
         saveBtn.addActionListener(e -> {
             String newName = nameField.getText().trim();
@@ -486,18 +526,133 @@ public class AuctionUI extends JFrame {
             String currentName = avatarButton.getUsername();
             String finalName = newName.isEmpty() ? currentName : newName;
 
-            // Gói 3 thông tin lại ném xuống Server để chọc vào Database
             String payload = String.format("{\"oldUser\":\"%s\",\"newUser\":\"%s\",\"newPass\":\"%s\"}", currentName, finalName, newPass);
             out.println(gson.toJson(new Request("UPDATE_PROFILE", payload)));
 
-            if (!newName.isEmpty()) {
-                avatarButton.setUsername(newName); // Cập nhật tên trên UI cho mượt
-            }
-
+            if (!newName.isEmpty()) avatarButton.setUsername(newName);
             JOptionPane.showMessageDialog(this, "Cập nhật dữ liệu Hệ thống thành công!");
-            switchPage("Tất cả"); // Xong việc thì đá về trang chủ
+            switchPage("Tất cả");
         });
     }
+
+    // =====================================
+    // TRANG NẠP TIỀN
+    // =====================================
+    private void setupDepositPage(JPanel panel) {
+        panel.setBackground(new Color(25, 25, 28)); // Chuẩn Dark Mode
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 15, 10, 15);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel title = new JLabel("CỔNG THANH TOÁN TỰ ĐỘNG", SwingConstants.CENTER);
+        title.setFont(new Font("Helvetica", Font.BOLD, 26));
+        title.setForeground(Color.WHITE);
+        gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2; panel.add(title, gbc);
+
+        JLabel info = new JLabel("<html><center>Vui lòng quét mã QR dưới đây và ghi lời nhắn:<br><b style='color:#5a8cff; font-size:16px;'>NAP " + avatarButton.getUsername() + "</b></center></html>", SwingConstants.CENTER);
+        info.setFont(new Font("Helvetica", Font.PLAIN, 15));
+        info.setForeground(Color.LIGHT_GRAY);
+        gbc.gridy = 1; panel.add(info, gbc);
+
+        // QR Code to, rõ, sắc nét 300x300
+        JLabel qrLabel = new JLabel("Lỗi không tải được ảnh QR", SwingConstants.CENTER);
+        qrLabel.setForeground(Color.RED);
+        try {
+            ImageIcon qrIcon = new ImageIcon(new ImageIcon("src/main/java/frontend/icons/qr-donate.jpg").getImage().getScaledInstance(300, 300, Image.SCALE_SMOOTH));
+            qrLabel.setIcon(qrIcon);
+            qrLabel.setText("");
+        } catch (Exception e) {}
+        gbc.gridy = 2; panel.add(qrLabel, gbc);
+
+        gbc.gridwidth = 1;
+        JLabel amountLbl = new JLabel("Số tiền đã nạp (VNĐ):");
+        amountLbl.setFont(new Font("Helvetica", Font.BOLD, 15));
+        amountLbl.setForeground(Color.WHITE);
+        gbc.gridy = 3; gbc.gridx = 0; panel.add(amountLbl, gbc);
+
+        JTextField amountField = new JTextField(15);
+        amountField.setBackground(new Color(40, 40, 45));
+        amountField.setForeground(Color.WHITE);
+        amountField.setCaretColor(Color.WHITE);
+        amountField.setFont(new Font("Helvetica", Font.BOLD, 16));
+        gbc.gridx = 1; panel.add(amountField, gbc);
+
+        JButton btnDone = new JButton("XÁC NHẬN ĐÃ CHUYỂN KHOẢN");
+        btnDone.setBackground(new Color(0, 150, 80));
+        btnDone.setForeground(Color.WHITE);
+        btnDone.setFont(new Font("Helvetica", Font.BOLD, 14));
+        btnDone.setPreferredSize(new Dimension(200, 40));
+        gbc.gridy = 4; gbc.gridx = 0; gbc.gridwidth = 2; panel.add(btnDone, gbc);
+
+        btnDone.addActionListener(event -> {
+            try {
+                double amount = Double.parseDouble(amountField.getText().trim());
+                if (amount <= 0) throw new Exception();
+
+                btnDone.setText("ĐANG CHỜ NGÂN HÀNG XÁC NHẬN...");
+                btnDone.setBackground(Color.GRAY);
+                btnDone.setEnabled(false);
+
+                // Giả lập call API ngân hàng mất 3 giây
+                new Thread(() -> {
+                    try {
+                        Thread.sleep(3000);
+                        String payload = String.format("{\"username\":\"%s\",\"amount\":%f}", avatarButton.getUsername(), amount);
+                        out.println(gson.toJson(new network.Request("DEPOSIT", payload)));
+
+                        SwingUtilities.invokeLater(() -> {
+                            client.ui.auction.NotificationToast.show(this, "✅ Nạp thành công " + amount + " VNĐ!");
+                            amountField.setText("");
+                            btnDone.setText("XÁC NHẬN ĐÃ CHUYỂN KHOẢN");
+                            btnDone.setBackground(new Color(0, 150, 80));
+                            btnDone.setEnabled(true);
+                            switchPage("Tất cả"); // Nạp xong đá về trang chủ
+                        });
+                    } catch (Exception ex) {}
+                }).start();
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Số tiền không hợp lệ! Vui lòng nhập số.");
+            }
+        });
+    }
+
+    // =====================================
+    // TRANG DONATE CHO DEV
+    // =====================================
+    private void setupDonatePage(JPanel panel) {
+        panel.setBackground(new Color(25, 25, 28)); // Chuẩn Dark Mode
+        GridBagConstraints gbc = new GridBagConstraints();
+        gbc.insets = new Insets(10, 15, 10, 15);
+        gbc.fill = GridBagConstraints.HORIZONTAL;
+
+        JLabel title = new JLabel("☕ CẢM ƠN BẠN ĐÃ ỦNG HỘ DEV ☕", SwingConstants.CENTER);
+        title.setFont(new Font("Helvetica", Font.BOLD, 26));
+        title.setForeground(new Color(255, 100, 200)); // Màu hường cho nó cảm xúc
+        gbc.gridx = 0; gbc.gridy = 0; panel.add(title, gbc);
+
+        JLabel info = new JLabel("<html><center>Mọi sự đóng góp của bạn đều là động lực to lớn<br>giúp hệ thống Auction ngày càng hoàn thiện hơn!</center></html>", SwingConstants.CENTER);
+        info.setFont(new Font("Helvetica", Font.PLAIN, 15));
+        info.setForeground(Color.LIGHT_GRAY);
+        gbc.gridy = 1; panel.add(info, gbc);
+
+        // QR Code SIÊU TO KHỔNG LỒ 400x400
+        JLabel qrLabel = new JLabel("Lỗi không tải được ảnh QR", SwingConstants.CENTER);
+        qrLabel.setForeground(Color.RED);
+        try {
+            ImageIcon qrIcon = new ImageIcon(new ImageIcon("src/main/java/frontend/icons/qr-donate.jpg").getImage().getScaledInstance(400, 400, Image.SCALE_SMOOTH));
+            qrLabel.setIcon(qrIcon);
+            qrLabel.setText("");
+        } catch (Exception e) {}
+        gbc.gridy = 2; panel.add(qrLabel, gbc);
+
+        JButton backBtn = new JButton("Quay lại trang chủ");
+        backBtn.setBackground(new Color(80, 80, 90));
+        backBtn.setForeground(Color.WHITE);
+        backBtn.setPreferredSize(new Dimension(200, 40));
+        gbc.gridy = 3; panel.add(backBtn, gbc);
+
+        backBtn.addActionListener(e -> switchPage("Tất cả"));
+    } // Đóng hàm setupDonatePage
 
     private void placeBid() {
         if (selectedItem == null) { JOptionPane.showMessageDialog(this, "Chọn sản phẩm trước!"); return; }

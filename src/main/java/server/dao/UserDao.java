@@ -190,4 +190,21 @@ public class UserDao {
             return false;
         }
     }
+    // ==========================================
+    // TÍNH TỔNG TIỀN ĐANG BỊ ĐÓNG BĂNG TRONG CÁC PHIÊN CHƯA KẾT THÚC
+    // ==========================================
+    public static double getLockedBalance(String username) {
+        double locked = 0.0;
+        try (Connection conn = server.util.DBConnection.getConnection()) {
+            // Lấy tổng current_price của tất cả các món mà ông này đang là highest_bidder
+            String sql = "SELECT SUM(current_price) AS total FROM items WHERE highest_bidder = ? AND status = 'ACTIVE'";
+            PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, username);
+            ResultSet rs = stmt.executeQuery();
+            if (rs.next()) {
+                locked = rs.getDouble("total");
+            }
+        } catch (Exception e) {}
+        return locked;
+    }
 }
