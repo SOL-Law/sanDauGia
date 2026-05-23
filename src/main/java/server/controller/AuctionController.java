@@ -16,14 +16,14 @@ public class AuctionController {
         double price = (double) obj.get("price");
         String username = (String) obj.get("username");
 
-        // 🔥 1. LẤY TỔNG TIỀN VÀ TIỀN ĐANG BỊ ĐÓNG BĂNG Ở PHIÊN KHÁC
+        //  1. LẤY TỔNG TIỀN VÀ TIỀN ĐANG BỊ ĐÓNG BĂNG Ở PHIÊN KHÁC
         double currentBalance = server.dao.UserDao.getBalance(username);
         double lockedBalance = server.dao.UserDao.getLockedBalance(username);
         double availableBalance = currentBalance - lockedBalance;
 
-        // 🔥 2. KIỂM TRA SỐ DƯ KHẢ DỤNG
+        //  2. KIỂM TRA SỐ DƯ KHẢ DỤNG
         if (availableBalance < price) {
-            String msg = String.format("❌ Thất bại! Bạn đang bị tạm giữ %,.0f VNĐ ở các phiên khác. Số dư khả dụng không đủ!", lockedBalance);
+            String msg = String.format(" Thất bại! Bạn đang bị tạm giữ %,.0f VNĐ ở các phiên khác. Số dư khả dụng không đủ!", lockedBalance);
             client.sendResponse("NOTIFY", msg);
             return;
         }
@@ -35,7 +35,7 @@ public class AuctionController {
             AuctionServer.broadcast(gson.toJson(new Request("UPDATE_AUCTION", data)));
             server.dao.ItemDao.insertBidHistory(item, username, (int) price);
         } else {
-            client.sendResponse("NOTIFY", "❌ Đấu giá thất bại! Vui lòng đặt giá cao hơn giá hiện tại.");
+            client.sendResponse("NOTIFY", " Đấu giá thất bại! Vui lòng đặt giá cao hơn giá hiện tại.");
         }
     }
 
@@ -103,13 +103,33 @@ public class AuctionController {
 
             model.AutoBid newAuto = new model.AutoBid(autoUser, autoItem, maxBid, increment);
             AuctionManager.getInstance().registerAutoBid(newAuto);
-            client.sendResponse("NOTIFY", "🤖 Đã kích hoạt Auto-Bid thành công cho mặt hàng: " + autoItem);
+            client.sendResponse("NOTIFY", " Đã kích hoạt Auto-Bid thành công cho mặt hàng: " + autoItem);
 
             AuctionManager.getInstance().executeAutoBidding(autoItem);
             String freshData = AuctionManager.getInstance().getAllItems();
             AuctionServer.broadcast(gson.toJson(new Request("UPDATE_AUCTION", freshData)));
         } catch (Exception ex) {
             System.out.println("Lỗi xử lý REGISTER_AUTO_BID: " + ex.getMessage());
+        }
+    }
+    public static void handleRestoreItem(ClientHandler client, String payload) {
+        try {
+            com.google.gson.JsonObject json = com.google.gson.JsonParser.parseString(payload).getAsJsonObject();
+            String itemName = json.get("itemName").getAsString();
+            int duration = json.get("duration").getAsInt();
+
+            String result = AuctionManager.getInstance().restoreItemFromDB(itemName, duration);
+            if (result.equals("SUCCESS")) {
+                client.sendResponse("NOTIFY", " Khôi phục thành công! Đồ vật đã quay lại sàn đấu giá.");
+
+                // Phát loa cập nhật giao diện cho tất cả Client đang online
+                String data = AuctionManager.getInstance().getAllItems();
+                server.AuctionServer.broadcast(gson.toJson(new Request("UPDATE_AUCTION", data)));
+            } else {
+                client.sendResponse("NOTIFY", " Lỗi: " + result);
+            }
+        } catch (Exception ex) {
+            System.out.println("Lỗi xử lý RESTORE_ITEM: " + ex.getMessage());
         }
     }
 }

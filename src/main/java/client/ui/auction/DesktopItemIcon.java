@@ -56,7 +56,7 @@ public class DesktopItemIcon extends JPanel {
                 timerLabel.setForeground(timeLeft[0] <= 10 ? new Color(255, 75, 75) : new Color(120, 255, 160));
             } else {
                 ((Timer)e.getSource()).stop();
-                timerLabel.setText("⏰ Đã kết thúc");
+                timerLabel.setText(" Đã kết thúc");
                 timerLabel.setForeground(Color.GRAY);
             }
         });
@@ -78,7 +78,7 @@ public class DesktopItemIcon extends JPanel {
         priceLabel.setFont(new Font("Segoe UI", Font.BOLD, 21));
         priceLabel.setForeground(new Color(255, 110, 110)); // Đỏ sáng nổi bật
 
-        JLabel leaderLabel = new JLabel(leader.equals("None") ? "Chưa có ai đặt giá" : "👑 Top bid: " + leader);
+        JLabel leaderLabel = new JLabel(leader.equals("None") ? "Chưa có ai đặt giá" : " Top bid: " + leader);
         leaderLabel.setFont(new Font("Segoe UI", Font.ITALIC, 14));
         leaderLabel.setForeground(new Color(200, 200, 210)); // Trắng xám sang trọng
 
@@ -121,9 +121,9 @@ public class DesktopItemIcon extends JPanel {
         int hours = (totalSeconds % 86400) / 3600;
         int minutes = (totalSeconds % 3600) / 60;
         int seconds = totalSeconds % 60;
-        if (days > 0) return String.format(" ⏳ %d ngày %02d:%02d:%02d", days, hours, minutes, seconds);
-        else if (hours > 0) return String.format(" ⏳ %02d:%02d:%02d", hours, minutes, seconds);
-        else return String.format(" ⚡ %02d:%02d", minutes, seconds);
+        if (days > 0) return String.format("  %d ngày %02d:%02d:%02d", days, hours, minutes, seconds);
+        else if (hours > 0) return String.format("  %02d:%02d:%02d", hours, minutes, seconds);
+        else return String.format("  %02d:%02d", minutes, seconds);
     }
 
     private ImageIcon loadIcon(String name, String base64) {

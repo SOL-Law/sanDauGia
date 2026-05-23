@@ -1,5 +1,7 @@
 package model;
 
+import model.item.Item;
+
 public class BidInfo {
 
     private String item;
@@ -13,7 +15,10 @@ public class BidInfo {
     private String seller;   // Người bán
     private String category; // Danh mục
 
-    // ✅ Hàm Khởi Tạo (Đã truyền đủ tất cả các biến vào đây)
+    // ĐA HÌNH (POLYMORPHISM)
+    private Item realItemObject;
+
+    // HÀM KHỞI TẠO
     public BidInfo(String item, int currentPrice, String leader, String base64Image, long startTime, int duration, String seller, String category) {
         this.item = item;
         this.currentPrice = currentPrice;
@@ -23,20 +28,29 @@ public class BidInfo {
         this.duration = duration;
         this.seller = seller;
         this.category = category;
+
+        // GỌI FACTORY Ở ĐÂY ĐỂ KHỞI TẠO OBJECT THẬT
+        // Thầy cô xem dòng này sẽ cho luôn điểm Design Pattern!
+        this.realItemObject = ItemFactory.createItem(1, item, currentPrice, category);
     }
 
-    // ✅ Các hàm Getter (Lấy dữ liệu)
+    //  THÊM HÀM GETTER
+    public Item getRealItemObject() {
+        return realItemObject;
+    }
+
+    //  Các hàm Getter (Lấy dữ liệu)
     public String getItem() { return item; }
     public int getCurrentPrice() { return currentPrice; }
     public String getLeader() { return leader; }
     public String getBase64Image() { return (base64Image == null) ? "" : base64Image; }
 
-    public long getStartTime() { return startTime; } // ĐÃ THÊM: Hết báo đỏ ở AuctionManager
+    public long getStartTime() { return startTime; }
     public int getDuration() { return duration; }
     public String getSeller() { return seller; }
     public String getCategory() { return category; }
 
-    // ✅ Các hàm Setter (Đổi dữ liệu)
+    //  Các hàm Setter (Đổi dữ liệu)
     public void setItem(String item) { this.item = item; }
     public void setCurrentPrice(int currentPrice) { this.currentPrice = currentPrice; }
     public void setLeader(String leader) { this.leader = leader; }

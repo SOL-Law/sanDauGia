@@ -30,34 +30,31 @@ public class ItemDao {
     // 2. LẤY TOÀN BỘ SẢN PHẨM LÚC BẬT SERVER
     // ==========================================
     public static void loadAllItemsToManager() {
-        try (Connection conn = server.util.DBConnection.getConnection()) {
-            // BƯỚC 1: Sửa câu SQL, móc thêm 2 cột mới (seller_name, category) từ DB lên
-            String sql = "SELECT name, current_price, image_base64, seller_name, category FROM items WHERE status = 'ACTIVE'";
-            PreparedStatement stmt = conn.prepareStatement(sql);
-            ResultSet rs = stmt.executeQuery();
+        try (java.sql.Connection conn = server.util.DBConnection.getConnection()) {
+            //  BƯỚC 1: Đã thêm highest_bidder vào câu lệnh SQL
+            String sql = "SELECT name, current_price, image_base64, seller_name, category, highest_bidder FROM items WHERE status = 'ACTIVE'";
+            java.sql.PreparedStatement stmt = conn.prepareStatement(sql);
+            java.sql.ResultSet rs = stmt.executeQuery();
 
             model.AuctionManager manager = model.AuctionManager.getInstance();
             int count = 0;
-
             while (rs.next()) {
                 String name = rs.getString("name");
                 int price = rs.getInt("current_price");
                 String image = rs.getString("image_base64");
-
-                // BƯỚC 2: Hứng dữ liệu vào biến
                 String seller = rs.getString("seller_name");
                 String category = rs.getString("category");
 
-                // BƯỚC 3: Dùng hàm addItem loại XỊN (đủ 6 tham số), mặc định cho 60 giây
-                manager.addItem(name, price, image, 60, seller, category);
+                //  BƯỚC 2: Hứng tên người dẫn đầu từ DB
+                String leader = rs.getString("highest_bidder");
+                if (leader == null || leader.trim().isEmpty()) leader = "None";
 
-                //  BƯỚC 4: Rất quan trọng - Kích hoạt đồng hồ đếm lùi cho món đồ này
-                manager.startAuctionTimer(name, 60);
-
+                //  BƯỚC 3: Dùng hàm mới để truyền cả Leader lên RAM
+                manager.loadItemFromDB(name, price, image, 3600, seller, category, leader);
+                manager.startAuctionTimer(name, 3600); // Mặc định cho sống 1 tiếng (3600s)
                 count++;
             }
             System.out.println(" Đã tải thành công " + count + " sản phẩm từ Database lên Server!");
-
         } catch (Exception e) {
             System.out.println("Lỗi tải danh sách sản phẩm: " + e.getMessage());
         }
@@ -260,5 +257,34 @@ public class ItemDao {
             System.out.println("Lỗi SQL khi sửa tên sản phẩm: " + e.getMessage());
             return false;
         }
+    }
+    // ==========================================
+    // 10. KHÔI PHỤC ĐỒ VẬT (Dành riêng cho ADMIN)
+    // ==========================================
+    public static java.util.Map<String, String> getItemForRestore(String itemName) {
+        java.util.Map<String, String> info = new java.util.HashMap<>();
+        try (java.sql.Connection conn = server.util.DBConnection.getConnection()) {
+            //  Móc thêm highest_bidder
+            String sql = "SELECT current_price, image_base64, seller_name, category, highest_bidder FROM items WHERE name = ?";
+            java.sql.PreparedStatement stmt = conn.prepareStatement(sql);
+            stmt.setString(1, itemName);
+            java.sql.ResultSet rs = stmt.executeQuery();
+
+            if (rs.next()) {
+                info.put("price", String.valueOf(rs.getInt("current_price")));
+                info.put("image", rs.getString("image_base64"));
+                info.put("seller", rs.getString("seller_name"));
+                info.put("category", rs.getString("category"));
+
+                //  Lấy tên người dẫn đầu
+                String leader = rs.getString("highest_bidder");
+                info.put("leader", (leader == null || leader.trim().isEmpty()) ? "None" : leader);
+
+                java.sql.PreparedStatement stmt2 = conn.prepareStatement("UPDATE items SET status = 'ACTIVE' WHERE name = ?");
+                stmt2.setString(1, itemName);
+                stmt2.executeUpdate();
+            }
+        } catch (Exception e) {}
+        return info;
     }
 }

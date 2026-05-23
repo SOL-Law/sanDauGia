@@ -198,7 +198,7 @@ public class AuctionUI extends JFrame {
         JPanel background = new JPanel(new BorderLayout());
         background.setBackground(Color.WHITE);
 
-        // ✅ [ĐÃ FIX]: KHỞI TẠO AVATAR BUTTON Ở ĐÂY TRƯỚC TIÊN ĐỂ CÁC TRANG BÊN DƯỚI DÙNG ĐƯỢC
+        //  [ĐÃ FIX]: KHỞI TẠO AVATAR BUTTON Ở ĐÂY TRƯỚC TIÊN ĐỂ CÁC TRANG BÊN DƯỚI DÙNG ĐƯỢC
         avatarButton = new UserProfileButton(this, this.myUsername, out, gson);
 
         // ========================= 1. KHUNG CHỨA TRANG (CARD LAYOUT) =========================
@@ -210,6 +210,25 @@ public class AuctionUI extends JFrame {
         JButton deleteBtn = new JButton("Xóa sản phẩm");
         JButton uploadBtn = new JButton("Đăng sản phẩm");
         JButton chartBtn = new JButton(" Xem Biểu Đồ");
+        JButton restoreBtn = new JButton(" Khôi phục phiên");
+        restoreBtn.setPreferredSize(new Dimension(160, 35));
+        restoreBtn.setBackground(new Color(220, 53, 69)); // Đỏ mận quyền lực
+        restoreBtn.setForeground(Color.WHITE);
+        restoreBtn.addActionListener(e -> {
+            String targetName = JOptionPane.showInputDialog(this, "Nhập CHÍNH XÁC tên món đồ đã kết thúc để khôi phục:");
+            if (targetName == null || targetName.trim().isEmpty()) return;
+
+            String timeStr = JOptionPane.showInputDialog(this, "Nhập thời gian đếm ngược mới cho phiên này (giây):", "3600");
+            if (timeStr == null || timeStr.trim().isEmpty()) return;
+
+            try {
+                int duration = Integer.parseInt(timeStr.trim());
+                String payload = String.format("{\"itemName\":\"%s\",\"duration\":%d}", targetName, duration);
+                out.println(gson.toJson(new Request("RESTORE_ITEM", payload)));
+            } catch (Exception ex) {
+                JOptionPane.showMessageDialog(this, "Thời gian phải là số nguyên!");
+            }
+        });
 
         java.util.function.Consumer<String> onSelectAction = item -> {
             selectedItem = item;
@@ -268,7 +287,8 @@ public class AuctionUI extends JFrame {
 
         // ========================= 2. BREADCRUMB =========================
         breadcrumbLabel = new JLabel("<html><font color='#0064d2'><b>Trang chủ</b></font> &gt; Tất cả</html>");
-        breadcrumbLabel.setFont(new Font("Helvetica", Font.PLAIN, 18));
+        breadcrumbLabel.setFont(new Font("Segoe UI", Font.BOLD, 18));
+        breadcrumbLabel.setForeground(Color.BLACK);
         breadcrumbLabel.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
         breadcrumbLabel.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
@@ -284,6 +304,7 @@ public class AuctionUI extends JFrame {
         categoryBtn.setFont(new Font("Helvetica", Font.PLAIN, 14));
         categoryBtn.setPreferredSize(new Dimension(160, 38));
         categoryBtn.setBackground(new Color(245, 245, 245));
+        categoryBtn.setForeground(Color.BLACK);
         categoryBtn.setCursor(new Cursor(Cursor.HAND_CURSOR));
 
         breadcrumbLabel.addMouseListener(new java.awt.event.MouseAdapter() {
@@ -360,15 +381,18 @@ public class AuctionUI extends JFrame {
         centerPanel.add(cardPanel, BorderLayout.CENTER);
 
         // ========================= 4. BOTTOM PANEL =========================
-        JPanel bottomPanel = new JPanel();
+        //  Nâng chiều cao lên 90px và dùng FlowLayout để nó tự rớt dòng cho các nút
+        JPanel bottomPanel = new JPanel(new FlowLayout(FlowLayout.CENTER, 10, 10));
+        bottomPanel.setPreferredSize(new Dimension(1100, 90));
         bottomPanel.setBackground(Color.WHITE);
         bottomPanel.setBorder(BorderFactory.createMatteBorder(1, 0, 0, 0, Color.LIGHT_GRAY));
 
         JLabel label = new JLabel("Nhập giá:");
-        label.setFont(new Font("Helvetica", Font.BOLD, 14));
+        label.setFont(new Font("Segoe UI", Font.BOLD, 14));
+        label.setForeground(Color.BLACK); //  Ép chữ màu Đen nổi trên nền Trắng!
+
         bidField = new JTextField(10);
         bidField.setPreferredSize(new Dimension(100, 35));
-
         bidButton.setEnabled(false);
         bidButton.setPreferredSize(new Dimension(90, 35));
         bidButton.setBackground(new Color(0, 100, 210));
@@ -415,7 +439,7 @@ public class AuctionUI extends JFrame {
         uploadBtn.addActionListener(e -> new UploadDialog(this, out, gson, avatarButton.getUsername()).setVisible(true));
 
         // ĐOẠN CODE MỚI THAY THẾ (Đã thêm nút Auto-Bid chuẩn giao diện):
-        JButton autoBidBtn = new JButton("🤖 Auto-Bid");
+        JButton autoBidBtn = new JButton(" Auto-Bid");
         autoBidBtn.setBackground(new Color(255, 140, 0)); // Màu cam nổi bật
         autoBidBtn.setForeground(Color.WHITE);
         autoBidBtn.setFont(new Font("Helvetica", Font.BOLD, 13));
@@ -438,6 +462,7 @@ public class AuctionUI extends JFrame {
             bottomPanel.add(autoBidBtn); // Thêm nút Auto-Bid cho Admin
             bottomPanel.add(editBtn);
             bottomPanel.add(deleteBtn); bottomPanel.add(uploadBtn);
+            bottomPanel.add(restoreBtn);
         }
 
         bottomPanel.add(Box.createHorizontalStrut(20));
@@ -572,27 +597,29 @@ public class AuctionUI extends JFrame {
     // TRANG NẠP TIỀN
     // =====================================
     private void setupDepositPage(JPanel panel) {
-        panel.setBackground(new Color(25, 25, 28));
-        // Chuẩn Dark Mode
+        panel.setBackground(new Color(25, 25, 28)); // Chuẩn Dark Mode
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 15, 10, 15);
+
+        //  FIX LỖI TRÀN MÀN HÌNH: Giảm khoảng cách giữa các dòng xuống 5px
+        gbc.insets = new Insets(5, 15, 5, 15);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
         JLabel title = new JLabel("CỔNG THANH TOÁN TỰ ĐỘNG", SwingConstants.CENTER);
-        title.setFont(new Font("Helvetica", Font.BOLD, 26));
+        //  FIX LỖI MẤT DẤU TIẾNG VIỆT: Đổi sang font Segoe UI
+        title.setFont(new Font("Segoe UI", Font.BOLD, 24));
         title.setForeground(Color.WHITE);
         gbc.gridx = 0; gbc.gridy = 0; gbc.gridwidth = 2; panel.add(title, gbc);
 
         JLabel info = new JLabel("<html><center>Vui lòng quét mã QR dưới đây và ghi lời nhắn:<br><b style='color:#5a8cff; font-size:16px;'>NAP " + avatarButton.getUsername() + "</b></center></html>", SwingConstants.CENTER);
-        info.setFont(new Font("Helvetica", Font.PLAIN, 15));
+        info.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         info.setForeground(Color.LIGHT_GRAY);
         gbc.gridy = 1; panel.add(info, gbc);
 
-        // QR Code to, rõ, sắc nét 300x300
+        //  FIX LỖI TRÀN MÀN HÌNH: Thu nhỏ QR Code xuống 240x240
         JLabel qrLabel = new JLabel("Lỗi không tải được ảnh QR", SwingConstants.CENTER);
         qrLabel.setForeground(Color.RED);
         try {
-            ImageIcon qrIcon = new ImageIcon(new ImageIcon("src/main/java/frontend/icons/qr-donate.jpg").getImage().getScaledInstance(300, 300, Image.SCALE_SMOOTH));
+            ImageIcon qrIcon = new ImageIcon(new ImageIcon("src/main/java/frontend/icons/qr-donate.jpg").getImage().getScaledInstance(240, 240, Image.SCALE_SMOOTH));
             qrLabel.setIcon(qrIcon);
             qrLabel.setText("");
         } catch (Exception e) {}
@@ -600,22 +627,21 @@ public class AuctionUI extends JFrame {
 
         gbc.gridwidth = 1;
         JLabel amountLbl = new JLabel("Số tiền đã nạp (VNĐ):");
-        amountLbl.setFont(new Font("Helvetica", Font.BOLD, 15));
+        amountLbl.setFont(new Font("Segoe UI", Font.BOLD, 15));
         amountLbl.setForeground(Color.WHITE);
-        gbc.gridy = 3;
-        gbc.gridx = 0; panel.add(amountLbl, gbc);
+        gbc.gridy = 3; gbc.gridx = 0; panel.add(amountLbl, gbc);
 
         JTextField amountField = new JTextField(15);
         amountField.setBackground(new Color(40, 40, 45));
         amountField.setForeground(Color.WHITE);
         amountField.setCaretColor(Color.WHITE);
-        amountField.setFont(new Font("Helvetica", Font.BOLD, 16));
+        amountField.setFont(new Font("Segoe UI", Font.BOLD, 16));
         gbc.gridx = 1; panel.add(amountField, gbc);
 
         JButton btnDone = new JButton("XÁC NHẬN ĐÃ CHUYỂN KHOẢN");
         btnDone.setBackground(new Color(0, 150, 80));
         btnDone.setForeground(Color.WHITE);
-        btnDone.setFont(new Font("Helvetica", Font.BOLD, 14));
+        btnDone.setFont(new Font("Segoe UI", Font.BOLD, 14));
         btnDone.setPreferredSize(new Dimension(200, 40));
         gbc.gridy = 4; gbc.gridx = 0; gbc.gridwidth = 2; panel.add(btnDone, gbc);
 
@@ -626,20 +652,17 @@ public class AuctionUI extends JFrame {
 
                 btnDone.setText("ĐANG CHỜ NGÂN HÀNG XÁC NHẬN...");
                 btnDone.setBackground(Color.GRAY);
-
                 btnDone.setEnabled(false);
 
                 // Giả lập call API ngân hàng mất 3 giây
                 new Thread(() -> {
                     try {
                         Thread.sleep(3000);
-
                         String payload = String.format("{\"username\":\"%s\",\"amount\":%f}", avatarButton.getUsername(), amount);
                         out.println(gson.toJson(new network.Request("DEPOSIT", payload)));
 
                         SwingUtilities.invokeLater(() -> {
-
-                            client.ui.auction.NotificationToast.show(this, "✅ Nạp thành công " + amount + " VNĐ!");
+                            client.ui.auction.NotificationToast.show(this, " Nạp thành công " + amount + " VNĐ!");
                             amountField.setText("");
                             btnDone.setText("XÁC NHẬN ĐÃ CHUYỂN KHOẢN");
                             btnDone.setBackground(new Color(0, 150, 80));
@@ -658,28 +681,29 @@ public class AuctionUI extends JFrame {
     // TRANG DONATE CHO DEV
     // =====================================
     private void setupDonatePage(JPanel panel) {
-        panel.setBackground(new Color(25, 25, 28));
-        // Chuẩn Dark Mode
+        panel.setBackground(new Color(25, 25, 28)); // Chuẩn Dark Mode
         GridBagConstraints gbc = new GridBagConstraints();
-        gbc.insets = new Insets(10, 15, 10, 15);
+
+        //  FIX LỖI TRÀN MÀN HÌNH
+        gbc.insets = new Insets(8, 15, 8, 15);
         gbc.fill = GridBagConstraints.HORIZONTAL;
 
-        JLabel title = new JLabel("☕ CẢM ƠN BẠN ĐÃ ỦNG HỘ DEV ☕", SwingConstants.CENTER);
-        title.setFont(new Font("Helvetica", Font.BOLD, 26));
-        title.setForeground(new Color(255, 100, 200)); // Màu hường cho nó cảm xúc
-        gbc.gridx = 0;
-        gbc.gridy = 0; panel.add(title, gbc);
+        JLabel title = new JLabel(" CẢM ƠN BẠN ĐÃ ỦNG HỘ DEV ", SwingConstants.CENTER);
+        //  FIX LỖI MẤT DẤU TIẾNG VIỆT
+        title.setFont(new Font("Segoe UI", Font.BOLD, 24));
+        title.setForeground(new Color(255, 100, 200));
+        gbc.gridx = 0; gbc.gridy = 0; panel.add(title, gbc);
 
         JLabel info = new JLabel("<html><center>Mọi sự đóng góp của bạn đều là động lực to lớn<br>giúp hệ thống Auction ngày càng hoàn thiện hơn!</center></html>", SwingConstants.CENTER);
-        info.setFont(new Font("Helvetica", Font.PLAIN, 15));
+        info.setFont(new Font("Segoe UI", Font.PLAIN, 15));
         info.setForeground(Color.LIGHT_GRAY);
         gbc.gridy = 1; panel.add(info, gbc);
 
-        // QR Code SIÊU TO KHỔNG LỒ 400x400
+        //  FIX LỖI TRÀN MÀN HÌNH: Thu nhỏ QR Code Donate xuống 260x260
         JLabel qrLabel = new JLabel("Lỗi không tải được ảnh QR", SwingConstants.CENTER);
         qrLabel.setForeground(Color.RED);
         try {
-            ImageIcon qrIcon = new ImageIcon(new ImageIcon("src/main/java/frontend/icons/qr-donate.jpg").getImage().getScaledInstance(400, 400, Image.SCALE_SMOOTH));
+            ImageIcon qrIcon = new ImageIcon(new ImageIcon("src/main/java/frontend/icons/qr-donate.jpg").getImage().getScaledInstance(260, 260, Image.SCALE_SMOOTH));
             qrLabel.setIcon(qrIcon);
             qrLabel.setText("");
         } catch (Exception e) {}
@@ -688,12 +712,12 @@ public class AuctionUI extends JFrame {
         JButton backBtn = new JButton("Quay lại trang chủ");
         backBtn.setBackground(new Color(80, 80, 90));
         backBtn.setForeground(Color.WHITE);
+        backBtn.setFont(new Font("Segoe UI", Font.BOLD, 14));
         backBtn.setPreferredSize(new Dimension(200, 40));
-        gbc.gridy = 3;
-        panel.add(backBtn, gbc);
+        gbc.gridy = 3; panel.add(backBtn, gbc);
 
         backBtn.addActionListener(e -> switchPage("Tất cả"));
-    } // Đóng hàm setupDonatePage
+    }
 
     private void placeBid() {
         if (selectedItem == null) { JOptionPane.showMessageDialog(this, "Chọn sản phẩm trước!");

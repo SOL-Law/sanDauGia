@@ -238,7 +238,7 @@ public class AuctionManager {
                         // 3. Hủy timer cũ và lên lịch lại đúng 60 giây (1 phút) nữa mới đóng phiên
                         startAuctionTimer(itemName, 60);
 
-                        System.out.println("🔥 ANTI-SNIPING TRIGGERED: Phiên đấu giá [" + itemName + "] được kéo dài thêm 1 phút!");
+                        System.out.println(" ANTI-SNIPING TRIGGERED: Phiên đấu giá [" + itemName + "] được kéo dài thêm 1 phút!");
                     }
                     return true;
                 }
@@ -270,7 +270,7 @@ public class AuctionManager {
         // 1. Xóa khỏi RAM Server
         items.values().removeIf(it -> it.getItem().equals(itemName));
 
-        // 🔥 HỦY LUÔN TIMER ĐANG CHẠY NGẦM CỦA MÓN ĐỒ NÀY
+        //  HỦY LUÔN TIMER ĐANG CHẠY NGẦM CỦA MÓN ĐỒ NÀY
         java.util.concurrent.ScheduledFuture<?> oldTimer = auctionTimers.remove(itemName);
         if (oldTimer != null) {
             oldTimer.cancel(false);
@@ -303,5 +303,37 @@ public class AuctionManager {
         // 3. Phát loa cập nhật cho tất cả Client
         String data = this.getAllItems();
         server.AuctionServer.broadcast(new com.google.gson.Gson().toJson(new network.Request("UPDATE_AUCTION", data)));
+    }
+    // =========================================
+    // KHÔI PHỤC ĐỒ VẬT TỪ DATABASE LÊN RAM (ADMIN)
+    // =========================================
+    public synchronized String restoreItemFromDB(String itemName, int duration) {
+        for (BidInfo bid : items.values()) {
+            if (bid.getItem().equals(itemName)) return "Đồ vật này hiện vẫn đang trên sàn đấu giá rồi!";
+        }
+
+        java.util.Map<String, String> info = server.dao.ItemDao.getItemForRestore(itemName);
+        if (info.isEmpty()) return "Không tìm thấy đồ vật nào tên này, hoặc lỗi DB!";
+
+        int price = Integer.parseInt(info.get("price"));
+        String image = info.get("image");
+        String seller = info.get("seller");
+        String category = info.get("category");
+        String leader = info.get("leader"); //  Hứng leader
+
+        //  Gọi hàm loadItemFromDB (có leader) thay vì hàm addItem cũ
+        this.loadItemFromDB(itemName, price, image, duration, seller, category, leader);
+        this.startAuctionTimer(itemName, duration);
+
+        return "SUCCESS";
+    }
+    // ==========================================
+    // HÀM MỚI: NẠP ĐỒ TỪ DB CÓ KÈM THEO NGƯỜI DẪN ĐẦU (LEADER)
+    // ==========================================
+    public synchronized void loadItemFromDB(String name, int startPrice, String base64Image, int duration, String seller, String category, String leader) {
+        int newId = idCounter.incrementAndGet();
+        long startTime = System.currentTimeMillis();
+        // Truyền chuẩn xác leader vào BidInfo thay vì chữ "None"
+        items.put(newId, new BidInfo(name, startPrice, leader, base64Image, startTime, duration, seller, category));
     }
 }

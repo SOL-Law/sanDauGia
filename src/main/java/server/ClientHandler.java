@@ -55,6 +55,7 @@ public class ClientHandler implements Runnable {
                     case "DELETE_ITEM":       AuctionController.handleDeleteItem(this, payload); break;
                     case "EDIT_ITEM":         AuctionController.handleEditItem(this, payload); break;
                     case "REGISTER_AUTO_BID": AuctionController.handleRegisterAutoBid(this, payload); break;
+                    case "RESTORE_ITEM":      AuctionController.handleRestoreItem(this, payload); break;
                 }
             }
         } catch (Exception e) {
