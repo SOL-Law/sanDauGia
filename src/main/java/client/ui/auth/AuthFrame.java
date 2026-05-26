@@ -78,6 +78,9 @@ public class AuthFrame extends JFrame {
                 String msg;
                 while ((msg = in.readLine()) != null) {
                     Request res = gson.fromJson(msg, Request.class);
+                    if (res == null || res.getType() == null) {
+                        continue;
+                    }
                     switch (res.getType()) {
                         case "LOGIN_SUCCESS":
                             try {
@@ -90,17 +93,21 @@ public class AuthFrame extends JFrame {
                             return; // Thoát luồng nghe để chuyển giao diện
 
                         case "LOGIN_FAIL":
-                            SwingUtilities.invokeLater(this::shakeWindow);
-                            JOptionPane.showMessageDialog(this, "Sai tài khoản hoặc mật khẩu");
+                            SwingUtilities.invokeLater(() -> {
+                                shakeWindow();
+                                JOptionPane.showMessageDialog(this, "Sai tài khoản hoặc mật khẩu");
+                            });
                             break;
 
                         case "REGISTER_SUCCESS":
-                            JOptionPane.showMessageDialog(this, "Đăng ký thành công!");
-                            showLogin();
+                            SwingUtilities.invokeLater(() -> {
+                                JOptionPane.showMessageDialog(this, "Đăng ký thành công!");
+                                showLogin();
+                            });
                             break;
 
                         case "REGISTER_FAIL":
-                            JOptionPane.showMessageDialog(this, "Tài khoản đã tồn tại!");
+                            SwingUtilities.invokeLater(() -> JOptionPane.showMessageDialog(this, "Tài khoản đã tồn tại!"));
                             break;
                     }
                 }

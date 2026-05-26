@@ -61,7 +61,7 @@ public class LoginPanel extends JPanel {
                 return;
             }
 
-            frame.currentUsername = username;
+            frame.setCurrentUsername(username);
 
             String payload = String.format(
                     "{\"username\":\"%s\",\"password\":\"%s\"}",

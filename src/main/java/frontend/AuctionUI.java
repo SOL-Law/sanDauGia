@@ -56,7 +56,7 @@ public class AuctionUI extends JFrame {
 
     private void requestInitialData() {
         out.println(gson.toJson(new Request("GET_AUCTION", "")));
-        out.println(gson.toJson(new Request("GET_BALANCE", userRole)));
+        out.println(gson.toJson(new Request("GET_BALANCE", myUsername)));
     }
 
     //  HÀM PUBLIC ĐỂ TRANG KHÁC GỌI LỆNH ĐIỀU HƯỚNG CHUYỂN TRANG
