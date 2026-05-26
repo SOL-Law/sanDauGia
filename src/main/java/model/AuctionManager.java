@@ -284,23 +284,40 @@ public class AuctionManager {
     }
 
     // =========================================
-    // SỬA TÊN SẢN PHẨM TRÊN HỆ THỐNG
+    // SỬA TÊN SẢN PHẨM TRÊN HỆ THỐNG (ĐÃ FIX LỖI TIMER)
     // =========================================
     public synchronized void editItemInSystem(String oldName, String newName) {
-        // 1. Sửa trên RAM Server
+        // 1. Sửa trên RAM Server và cập nhật lại luồng Timer đếm ngược
         for (java.util.Map.Entry<Integer, BidInfo> entry : items.entrySet()) {
             BidInfo bid = entry.getValue();
-
             if (bid.getItem().equals(oldName)) {
-                bid.setItem(newName); // Chỉ cập nhật mỗi cái tên!
+                bid.setItem(newName);
+
+                //  Tính toán số giây còn lại chính xác của phiên này
+                long elapsedSeconds = (System.currentTimeMillis() - bid.getStartTime()) / 1000;
+                int timeLeft = (int) Math.max(0, bid.getDuration() - elapsedSeconds);
+
+                // Hủy bộ đếm giờ cũ đang chạy ngầm của cái tên cũ (oldName) để giải phóng luồng
+                java.util.concurrent.ScheduledFuture<?> oldTimer = auctionTimers.remove(oldName);
+                if (oldTimer != null) {
+                    oldTimer.cancel(false);
+                }
+
+                // Kích hoạt bộ đếm giờ mới gắn liền với tên mới (newName), chạy nốt thời gian còn lại
+                this.startAuctionTimer(newName, timeLeft);
                 break;
+            }
+            for (AutoBid ab : autoBidsList) {
+                if (ab.getItemName().equals(oldName)) {
+                    ab.setItemName(newName);
+                }
             }
         }
 
         // 2. Sửa dưới Database
         server.dao.ItemDao.updateItemDetails(oldName, newName);
 
-        // 3. Phát loa cập nhật cho tất cả Client
+        // 3. Phát loa cập nhật cho tất cả Client đang online thấy tên mới ngay lập tức
         String data = this.getAllItems();
         server.AuctionServer.broadcast(new com.google.gson.Gson().toJson(new network.Request("UPDATE_AUCTION", data)));
     }

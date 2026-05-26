@@ -30,10 +30,18 @@ public class AuctionController {
 
         AuctionManager manager = AuctionManager.getInstance();
         if (manager.placeBid(item, (int) price, username)) {
-            manager.executeAutoBidding(item);
-            String data = manager.getAllItems();
-            AuctionServer.broadcast(gson.toJson(new Request("UPDATE_AUCTION", data)));
+
+            //  BƯỚC 1: LƯU LỊCH SỬ CỦA NGƯỜI ĐẶT BẰNG TAY XUỐNG DB TRƯỚC!
             server.dao.ItemDao.insertBidHistory(item, username, (int) price);
+
+            //  BƯỚC 2: KÍCH HOẠT BOT AUTO-BID
+            // (Nếu Bot cắn trả, nó sẽ tự lưu lịch sử của nó đè lên thành người dẫn đầu cuối cùng dưới DB)
+            manager.executeAutoBidding(item);
+
+            //  BƯỚC 3: PHÁT LOA CẬP NHẬT GIAO DIỆN CHO CẢ LÀNG
+            String data = manager.getAllItems();
+            server.AuctionServer.broadcast(gson.toJson(new Request("UPDATE_AUCTION", data)));
+
         } else {
             client.sendResponse("NOTIFY", " Đấu giá thất bại! Vui lòng đặt giá cao hơn giá hiện tại.");
         }

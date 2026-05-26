@@ -20,4 +20,7 @@ public class AutoBid {
     public int getMaxBid() { return maxBid; }
     public int getIncrement() { return increment; }
     public long getRegisteredTime() { return registeredTime; }
+    public void setItemName(String itemName) {
+        this.itemName = itemName;
+    }
 }
