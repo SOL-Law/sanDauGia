@@ -88,6 +88,6 @@ Kỹ thuật nâng cao & Điểm cộng:
 [x] Quyền lực của Admin: Có nút đỏ "Khôi phục phiên", hồi sinh các món đồ đã kết thúc về lại sàn đấu (Load lại từ DB lên RAM Server).
 
 6. TÀI LIỆU & VIDEO DEMO
-Báo cáo chi tiết (PDF): [Gắn link Google Drive của nhóm vào đây]
+Báo cáo chi tiết (PDF):https://drive.google.com/file/d/15KVo4ksFYFiY8PafVlEbe3239RKN47de/view?usp=sharing
 
-Video chạy thử App: [Gắn link YouTube vào đây]
+Video chạy thử App:https://youtu.be/wlu2VBUc7yM?si=gxnnJgXEAsDmucxL
